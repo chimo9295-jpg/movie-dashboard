@@ -101,6 +101,23 @@
         .chatbi-toolbar { display: flex; gap: 4px; margin-top: 6px; }
         .chatbi-toolbar button { padding: 4px 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: rgba(255,255,255,0.5); cursor: pointer; font-size: 10px; transition: all 0.2s; }
         .chatbi-toolbar button:hover { border-color: rgba(255,255,255,0.4); color: rgba(255,255,255,0.8); }
+        /* 预测卡片 */
+        .predict-today-val { font-size: 36px; font-weight: 800; line-height: 1; }
+        .predict-today-unit { font-size: 13px; font-weight: 400; opacity: 0.5; margin-left: 4px; }
+        .predict-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .predict-row:last-child { border-bottom: none; }
+        .predict-label { font-size: 11px; opacity: 0.55; }
+        .predict-value { font-size: 14px; font-weight: 700; }
+        .predict-trend { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; padding: 3px 8px; border-radius: 10px; }
+        .predict-trend.up { color: #64DCB4; background: rgba(100,220,180,0.12); }
+        .predict-trend.down { color: #FF6B6B; background: rgba(255,107,107,0.12); }
+        .predict-trend.stable { color: #a0aec0; background: rgba(160,174,192,0.12); }
+        .predict-trend .arrow { font-size: 16px; }
+        .predict-lifecycle { display: inline-block; padding: 4px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+        .predict-lifecycle.boom { color: #FF9F43; background: rgba(255,159,67,0.15); }
+        .predict-lifecycle.growth { color: #64DCB4; background: rgba(100,220,180,0.12); }
+        .predict-lifecycle.decline { color: #a0aec0; background: rgba(160,174,192,0.12); }
+        .predict-model-note { margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 10px; opacity: 0.4; line-height: 1.5; }
     </style>
 </head>
 <body>
@@ -130,9 +147,13 @@
     </div>
 
     <!-- Row 2: dual-axis chart (阿嬷的情书 累计票房 & 评分人数) + ChatBI -->
-    <div class="card chart-panel span3">
+    <div class="card chart-panel">
         <div class="card-title"><span class="icon" style="background:rgba(100,220,180,0.18);color:#64DCB4;">📈</span>累计票房 & 评分人数对比（给阿嬷的情书）</div>
         <div id="chart-dual" class="chart-box"></div>
+    </div>
+    <div class="card stat-card" id="predict-card-wrap">
+        <div class="card-title"><span class="icon" style="background:rgba(255,159,67,0.18);color:#FF9F43;">🔮</span>票房预测 · 给阿嬷的情书</div>
+        <div id="predict-card"><div class="loading-inline"></div></div>
     </div>
     <div class="card chatbi-panel">
         <div class="card-title"><span class="icon" style="background:rgba(150,120,255,0.18);color:#C896FF;">🤖</span>AI数据分析助手</div>
@@ -235,10 +256,83 @@ async function loadAllData() {
 }
 
 // ==================== Render All ====================
+
+// ==================== 票房预测卡片（给阿嬷的情书 · EWMA） ====================
+function renderPredictCard() {
+    const el = document.getElementById('predict-card');
+    const d = allData.dailyByMovie || {};
+    const records = d[AMAH_ID] || [];
+    if (!records.length) {
+        el.innerHTML = '<div style="font-size:11px;opacity:0.4;padding:16px 0;">暂无票房数据</div>';
+        return;
+    }
+
+    // 取最近5天数据，按日期排序
+    const sorted = [...records].sort((a, b) => (a.stat_date || '').localeCompare(b.stat_date || ''));
+    const recent5 = sorted.slice(-5);
+    const dailyBoxes = recent5.map(r => r.daily_box || 0);
+
+    // EWMA: S_t = α*X_t + (1-α)*S_{t-1}, α=0.3
+    const alpha = 0.3;
+    const ewma = [dailyBoxes[0]];
+    for (let i = 1; i < dailyBoxes.length; i++) {
+        ewma.push(alpha * dailyBoxes[i] + (1 - alpha) * ewma[i - 1]);
+    }
+
+    const latest = dailyBoxes[dailyBoxes.length - 1];
+    const latestEwma = ewma[ewma.length - 1];
+
+    // 明日预测: S_{t+1} = α*X_t + (1-α)*S_t
+    const tomorrowPred = alpha * latest + (1 - alpha) * latestEwma;
+
+    // 趋势判断：比较后2日均值 vs 前3日均值
+    const recent2 = ewma.slice(-2).reduce((a, b) => a + b, 0) / 2;
+    const prior3 = ewma.slice(0, 3).reduce((a, b) => a + b, 0) / 3;
+    const changeRate = prior3 > 0 ? (recent2 - prior3) / prior3 : 0;
+    let trend, trendClass, trendArrow;
+    if (changeRate > 0.03) {
+        trend = '上升'; trendClass = 'up'; trendArrow = '▲';
+    } else if (changeRate < -0.03) {
+        trend = '下降'; trendClass = 'down'; trendArrow = '▼';
+    } else {
+        trend = '平稳'; trendClass = 'stable'; trendArrow = '─';
+    }
+
+    // 生命周期判断
+    let stage, stageClass;
+    if (changeRate > 0.08) {
+        stage = '爆发期'; stageClass = 'boom';
+    } else if (changeRate > -0.05) {
+        stage = '稳定期'; stageClass = 'growth';
+    } else {
+        stage = '衰退期'; stageClass = 'decline';
+    }
+
+    el.innerHTML = `
+        <div class="predict-today-val" style="background:linear-gradient(135deg,#FF9F43,#FF6B6B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
+            ${fmtNum(latest)}<span class="predict-today-unit">万</span>
+        </div>
+        <div style="font-size:10px;opacity:0.4;margin-bottom:10px;">今日票房 · ${sorted[sorted.length-1].stat_date || '--'}</div>
+        <div class="predict-row">
+            <span class="predict-label">近5日趋势</span>
+            <span class="predict-trend ${trendClass}"><span class="arrow">${trendArrow}</span>${trend}</span>
+        </div>
+        <div class="predict-row">
+            <span class="predict-label">明日预测</span>
+            <span class="predict-value gradient-cyan">${fmtNum(tomorrowPred)}<span style="font-size:10px;opacity:0.5;"> 万</span></span>
+        </div>
+        <div class="predict-row">
+            <span class="predict-label">生命周期</span>
+            <span class="predict-lifecycle ${stageClass}">${stage}</span>
+        </div>
+        <div class="predict-model-note">
+            EWMA 指数加权移动平均<br>α=0.3 · 基于近${dailyBoxes.length}日数据
+        </div>`;
+}
 function renderAll() {
     [renderScoreCard, renderTotalCard, renderAmahCard, renderTodayCard,
      renderDualChart, renderDailyCompChart, renderAccumChart,
-     renderRadarChart, renderSummaryTable].forEach(fn => {
+     renderRadarChart, renderSummaryTable, renderPredictCard].forEach(fn => {
         try { fn(); } catch(e) { console.error(fn.name + ' error:', e); }
     });
     try {
