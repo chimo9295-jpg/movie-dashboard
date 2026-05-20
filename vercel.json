@@ -4,6 +4,7 @@
   "outputDirectory": ".",
   "functions": {
     "api/chatbi.py": {
+      "runtime": "@vercel/python",
       "memory": 256,
       "maxDuration": 30
     }

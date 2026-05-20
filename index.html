@@ -915,7 +915,8 @@ async function chatbiSend() {
 
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
-            throw new Error(err.error?.message || 'API 请求失败 (' + response.status + ')');
+            const msg = typeof err.error === 'string' ? err.error : err.error?.message;
+            throw new Error(msg || 'API 请求失败 (' + response.status + ')');
         }
 
         const result = await response.json();
