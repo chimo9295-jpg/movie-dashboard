@@ -377,9 +377,9 @@ function renderTotalCard() {
     });
 
     el.innerHTML = `
-        <div style="position:relative;display:inline-block;">
-            <div class="big-num gradient-cyan">${(latestTotal/10000).toFixed(2)}</div>
-            <span style="position:absolute;right:0;bottom:4px;font-size:12px;opacity:0.5;">亿</span>
+        <div>
+            <span class="big-num gradient-cyan">${(latestTotal/10000).toFixed(2)}</span>
+            <span style="font-size:13px;opacity:0.5;margin-left:3px;">亿</span>
         </div>
         <div style="font-size:11px;opacity:0.6;margin-top:4px;">四部电影综合累计</div>
         <div class="meta-row">
@@ -398,9 +398,9 @@ function renderAmahCard() {
     const dd = dash[AMAH_ID]||{};
 
     el.innerHTML = `
-        <div style="position:relative;display:inline-block;">
-            <div class="big-num" style="background:linear-gradient(135deg,#FFD700,#FF6B6B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">${((last.total_box||0)/10000).toFixed(2)}</div>
-            <span style="position:absolute;right:0;bottom:4px;font-size:12px;opacity:0.5;">亿</span>
+        <div>
+            <span class="big-num" style="background:linear-gradient(135deg,#FFD700,#FF6B6B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">${((last.total_box||0)/10000).toFixed(2)}</span>
+            <span style="font-size:13px;opacity:0.5;margin-left:3px;">亿</span>
         </div>
         <div style="font-size:11px;opacity:0.6;margin-top:4px;">累计票房</div>
         <div class="meta-row">
