@@ -309,8 +309,8 @@ function renderPredictCard() {
     }
 
     el.innerHTML = `
-        <div class="predict-today-val" style="background:linear-gradient(135deg,#FF9F43,#FF6B6B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
-            ${fmtNum(latest)}<span class="predict-today-unit">万</span>
+        <div>
+            <span class="predict-today-val" style="background:linear-gradient(135deg,#FF9F43,#FF6B6B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">${fmtNum(latest)}</span><span class="predict-today-unit">万</span>
         </div>
         <div style="font-size:10px;opacity:0.4;margin-bottom:10px;">今日票房 · ${sorted[sorted.length-1].stat_date || '--'}</div>
         <div class="predict-row">
@@ -319,7 +319,7 @@ function renderPredictCard() {
         </div>
         <div class="predict-row">
             <span class="predict-label">明日预测</span>
-            <span class="predict-value gradient-cyan">${fmtNum(tomorrowPred)}<span style="font-size:10px;opacity:0.5;"> 万</span></span>
+            <span class="predict-value gradient-cyan">${fmtNum(tomorrowPred)}</span><span style="font-size:10px;opacity:0.5;color:rgba(255,255,255,0.5);"> 万</span>
         </div>
         <div class="predict-row">
             <span class="predict-label">生命周期</span>
