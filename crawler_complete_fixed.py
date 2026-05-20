@@ -29,9 +29,13 @@ logger = logging.getLogger(__name__)
 BRIGHTDATA_TOKEN = os.environ.get("BRIGHTDATA_TOKEN", "")
 BRIGHTDATA_API_URL = os.environ.get("BRIGHTDATA_API_URL", "https://api.brightdata.com/request")
 BRIGHTDATA_ZONE = os.environ.get("BRIGHTDATA_ZONE", "cli_unlocker")
-MOVIE_DETAIL_URL = "https://piaofang.maoyan.com/movie/1516982"
 DASHBOARD_URL = "https://piaofang.maoyan.com/dashboard-ajax"
-TARGET_MOVIE = "给阿嬷的情书"
+MAYDAY_MOVIES = [
+    {"id": 1516982, "name": "给阿嬷的情书"},
+    {"id": 1528954, "name": "消失的人"},
+    {"id": 1525209, "name": "寒战1994"},
+    {"id": 1528750, "name": "穿普拉达的女王2"},
+]
 DAYS_TO_FETCH = 30
 PRE_SALE_BOX_FALLBACK = 1342.8  # 预售票房回退值（无 dashboard 数据时使用）
 
@@ -125,14 +129,15 @@ def brightdata_fetch(url: str, timeout: int = 120, max_retries: int = 3) -> Opti
     return None
 
 
-def fetch_detail_page_data(dashboard_split_total: float = 0.0,
+def fetch_detail_page_data(movie_id: int, dashboard_split_total: float = 0.0,
                            service_fee_rate: float = 0.0) -> List[Dict]:
     """从电影详情页提取历史票房数据，应用预售和服务费率
     - daily_box = 分账日票房 × (1 + service_fee_rate)
     - total_box = (预售 + 累计分账) × (1 + service_fee_rate)
     - 预售 = dashboard分账累计 - 详情页原始分账累计
     """
-    raw = brightdata_fetch(MOVIE_DETAIL_URL)
+    detail_url = f"https://piaofang.maoyan.com/movie/{movie_id}"
+    raw = brightdata_fetch(detail_url)
     if not raw:
         return []
 
@@ -212,11 +217,11 @@ class DataStorage:
         self.client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
         logger.info("[Storage] Supabase连接成功")
 
-    def save(self, data: Dict) -> bool:
+    def save(self, movie_id: int, data: Dict) -> bool:
         try:
             stat_date = data['stat_date']
             record = {
-                'movie_id': 1516982,
+                'movie_id': movie_id,
                 'stat_date': stat_date,
                 'daily_box': data['daily_box'],
                 'total_box': data['total_box'],
@@ -224,7 +229,7 @@ class DataStorage:
             }
 
             existing = self.client.table('mayday_daily_stats') \
-                .select('id').eq('movie_id', 1516982).eq('stat_date', stat_date).execute()
+                .select('id').eq('movie_id', movie_id).eq('stat_date', stat_date).execute()
 
             if existing.data:
                 rid = existing.data[0]['id']
@@ -241,28 +246,42 @@ class DataStorage:
 
 def main():
     logger.info("=" * 50)
-    logger.info(f"猫眼票房爬虫 - {TARGET_MOVIE}")
+    logger.info("猫眼票房爬虫 - 五一档四部电影")
     logger.info("=" * 50)
 
-    # 1. 获取 dashboard 数据（服务费率、分账累计）
-    total_w, split_w, _, service_fee_rate = fetch_dashboard_box(1516982)
-
-    # 2. 获取详情页数据并应用服务费率
     storage = DataStorage()
-    records = fetch_detail_page_data(dashboard_split_total=split_w,
-                                     service_fee_rate=service_fee_rate)
+    total_success = 0
+    total_records = 0
 
-    if not records:
-        logger.error("未获取到数据，终止")
-        sys.exit(1)
+    for movie in MAYDAY_MOVIES:
+        mid = movie["id"]
+        name = movie["name"]
+        logger.info(f"\n{'─' * 40}")
+        logger.info(f"  开始爬取: {name} (movie_id={mid})")
+        logger.info(f"{'─' * 40}")
 
-    success = 0
-    for rec in records:
-        if storage.save(rec):
-            success += 1
-        time.sleep(0.3)  # 避免请求过快
+        # 1. 获取 dashboard 数据（服务费率、分账累计）
+        total_w, split_w, _, service_fee_rate = fetch_dashboard_box(mid)
 
-    logger.info(f"\n[完成] {success}/{len(records)} 条数据保存成功")
+        # 2. 获取详情页数据并应用服务费率
+        records = fetch_detail_page_data(mid, dashboard_split_total=split_w,
+                                         service_fee_rate=service_fee_rate)
+
+        if not records:
+            logger.error(f"[{name}] 未获取到数据，跳过")
+            continue
+
+        success = 0
+        for rec in records:
+            if storage.save(mid, rec):
+                success += 1
+            time.sleep(0.3)
+
+        logger.info(f"[{name}] {success}/{len(records)} 条数据保存成功")
+        total_success += success
+        total_records += len(records)
+
+    logger.info(f"\n[完成] 总计 {total_success}/{total_records} 条数据保存成功")
 
 
 if __name__ == "__main__":
