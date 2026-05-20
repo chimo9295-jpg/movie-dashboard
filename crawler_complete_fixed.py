@@ -29,9 +29,54 @@ logger = logging.getLogger(__name__)
 BRIGHTDATA_TOKEN = os.environ.get("BRIGHTDATA_TOKEN", "")
 BRIGHTDATA_API_URL = os.environ.get("BRIGHTDATA_API_URL", "https://api.brightdata.com/request")
 MOVIE_DETAIL_URL = "https://piaofang.maoyan.com/movie/1516982"
+DASHBOARD_URL = "https://piaofang.maoyan.com/dashboard-ajax"
 TARGET_MOVIE = "给阿嬷的情书"
 DAYS_TO_FETCH = 30
-PRE_SALE_BOX = 1342.8  # 预售票房基准值（万元）
+PRE_SALE_BOX_FALLBACK = 1342.8  # 预售票房回退值（无 dashboard 数据时使用）
+
+
+def parse_box_desc(desc: str) -> float:
+    """解析票房描述文字 → 万元  例: '6.16亿'→61600"""
+    if not desc:
+        return 0.0
+    try:
+        desc = desc.strip()
+        if '亿' in desc:
+            return float(desc.replace('亿', '')) * 10000
+        elif '万' in desc:
+            return float(desc.replace('万', ''))
+        else:
+            return float(desc)
+    except ValueError:
+        return 0.0
+
+
+def fetch_dashboard_box(movie_id: int) -> tuple:
+    """从 dashboard-ajax 获取指定电影的综合/分账累计票房
+    返回: (total_box_w, split_box_w, pre_sale_w, service_fee_rate)
+    """
+    raw = brightdata_fetch(DASHBOARD_URL, timeout=120)
+    if not raw:
+        return 0, 0, PRE_SALE_BOX_FALLBACK, 0.0
+    try:
+        data = json.loads(raw.decode('utf-8'))
+        movie_list = data.get('movieList', {}).get('data', {}).get('list', [])
+        for m in movie_list:
+            mi = m.get('movieInfo', {})
+            if mi.get('movieId') == movie_id:
+                total_desc = m.get('sumBoxDesc', '')
+                split_desc = m.get('sumSplitBoxDesc', '')
+                total_w = parse_box_desc(total_desc)
+                split_w = parse_box_desc(split_desc)
+                if split_w > 0 and total_w > 0:
+                    service_fee_rate = round((total_w - split_w) / split_w, 6)
+                else:
+                    service_fee_rate = 0.0
+                logger.info(f"[Dashboard] total={total_desc}({total_w}w) split={split_desc}({split_w}w) fee_rate={service_fee_rate*100:.2f}%")
+                return total_w, split_w, 0.0, service_fee_rate
+    except Exception as e:
+        logger.error(f"[Dashboard] 解析失败: {e}")
+    return 0, 0, PRE_SALE_BOX_FALLBACK, 0.0
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://ebmncqnzammtplpwlveb.supabase.co")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "sb_publishable_36nGYLplp0DYcGbTx6GWpA_K11Jb9Gd")
@@ -79,8 +124,13 @@ def brightdata_fetch(url: str, timeout: int = 120, max_retries: int = 3) -> Opti
     return None
 
 
-def fetch_detail_page_data() -> List[Dict]:
-    """从电影详情页提取历史票房数据"""
+def fetch_detail_page_data(dashboard_split_total: float = 0.0,
+                           service_fee_rate: float = 0.0) -> List[Dict]:
+    """从电影详情页提取历史票房数据，应用预售和服务费率
+    - daily_box = 分账日票房 × (1 + service_fee_rate)
+    - total_box = (预售 + 累计分账) × (1 + service_fee_rate)
+    - 预售 = dashboard分账累计 - 详情页原始分账累计
+    """
     raw = brightdata_fetch(MOVIE_DETAIL_URL)
     if not raw:
         return []
@@ -114,28 +164,45 @@ def fetch_detail_page_data() -> List[Dict]:
 
     logger.info(f"[详情页] 获取到 {len(dates)} 天数据: {dates[0]} ~ {dates[-1]}")
 
-    total_box = PRE_SALE_BOX
-    result = []
+    # 先算原始分账累计（不含预售、不含服务费）
+    raw_split_total = 0.0
+    raw_records = []
     for i in range(len(dates)):
         val = None
         if i < len(real_values) and real_values[i]:
             try:
                 val = float(real_values[i])
-                total_box += val
+                raw_split_total += val
             except ValueError:
                 pass
         if val is not None:
-            result.append({
-                'stat_date': dates[i],
-                'daily_box': val,
-                'total_box': round(total_box, 2),
-            })
+            raw_records.append({'date': dates[i], 'daily_split': val})
 
-    logger.info(f"[详情页] 解析到 {len(result)} 条有效数据")
+    # 动态计算预售：用 dashboard 分账累计 - 详情页分账累计
+    if dashboard_split_total > 0 and raw_split_total > 0:
+        pre_sale_box = max(0, round(dashboard_split_total - raw_split_total, 2))
+        logger.info(f"[详情页] 动态预售: {dashboard_split_total}w - {raw_split_total:.2f}w = {pre_sale_box}w")
+    else:
+        pre_sale_box = PRE_SALE_BOX_FALLBACK
+        logger.info(f"[详情页] 使用回退预售: {PRE_SALE_BOX_FALLBACK}w (无 dashboard 数据)")
+
+    fee_mult = 1.0 + service_fee_rate
+    split_total = pre_sale_box
+    result = []
+    for rec in raw_records:
+        split_total += rec['daily_split']
+        daily_total = round(rec['daily_split'] * fee_mult, 2)
+        total_box_val = round(split_total * fee_mult, 2)
+        result.append({
+            'stat_date': rec['date'],
+            'daily_box': daily_total,
+            'total_box': total_box_val,
+        })
+
+    logger.info(f"[详情页] 解析到 {len(result)} 条有效数据 (服务费率={service_fee_rate*100:.2f}%, 预售={pre_sale_box}w)")
     if result:
-        # 验证最后一条
         last = result[-1]
-        logger.info(f"  最新: {last['stat_date']} 日票房={last['daily_box']:.2f}万 累计={last['total_box']:.2f}万")
+        logger.info(f"  最新: {last['stat_date']} 日票房={last['daily_box']:.2f}万 累计={last['total_box']:.2f}万 = {last['total_box']/10000:.2f}亿")
     return result
 
 
@@ -176,8 +243,13 @@ def main():
     logger.info(f"猫眼票房爬虫 - {TARGET_MOVIE}")
     logger.info("=" * 50)
 
+    # 1. 获取 dashboard 数据（服务费率、分账累计）
+    total_w, split_w, _, service_fee_rate = fetch_dashboard_box(1516982)
+
+    # 2. 获取详情页数据并应用服务费率
     storage = DataStorage()
-    records = fetch_detail_page_data()
+    records = fetch_detail_page_data(dashboard_split_total=split_w,
+                                     service_fee_rate=service_fee_rate)
 
     if not records:
         logger.error("未获取到数据，终止")
