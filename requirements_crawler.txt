@@ -1,0 +1,21 @@
+# 完整电影数据爬虫依赖
+# 安装命令: pip install -r requirements_crawler.txt
+
+# HTML 解析
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Supabase 数据库连接
+supabase>=2.0.0
+
+# HTTP 请求
+requests>=2.31.0
+
+# 类型提示
+typing-extensions>=4.8.0
+
+# 字体解析（猫眼 woff 反爬解码）
+fonttools>=4.45.0
+
+# 数据处理（可选）
+pandas>=2.0.0

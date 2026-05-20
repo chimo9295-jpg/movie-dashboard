@@ -1,0 +1,11 @@
+{
+  "name": "movie-dashboard",
+  "framework": null,
+  "outputDirectory": ".",
+  "functions": {
+    "api/chatbi.py": {
+      "memory": 256,
+      "maxDuration": 30
+    }
+  }
+}

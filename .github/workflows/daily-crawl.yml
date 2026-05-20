@@ -1,0 +1,61 @@
+name: Daily Movie Data Crawl
+
+on:
+  schedule:
+    # Midnight Beijing time (UTC+8) = 16:00 UTC
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements_crawler.txt
+
+      - name: Run Mayday multi-movie crawler
+        run: python mayday_crawler.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          BRIGHTDATA_TOKEN: ${{ secrets.BRIGHTDATA_TOKEN }}
+          BRIGHTDATA_API_URL: ${{ secrets.BRIGHTDATA_API_URL }}
+
+      - name: Run single-movie detail crawler
+        run: python crawler_complete_fixed.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          BRIGHTDATA_TOKEN: ${{ secrets.BRIGHTDATA_TOKEN }}
+          BRIGHTDATA_API_URL: ${{ secrets.BRIGHTDATA_API_URL }}
+
+      - name: Run Douban rating fetcher
+        run: python douban_rating_to_supabase.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          JUSTONEAPI_TOKEN: ${{ secrets.JUSTONEAPI_TOKEN }}
+
+      - name: Run Douban reviews fetcher
+        run: python douban_reviews_to_supabase.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          JUSTONEAPI_TOKEN: ${{ secrets.JUSTONEAPI_TOKEN }}
+
+      - name: Run prediction backtest (monitoring)
+        if: always()
+        run: python backtest_prediction.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}

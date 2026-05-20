@@ -166,7 +166,6 @@
         </div>
         <div class="chatbi-toolbar">
             <button onclick="clearChatHistory()" title="新建对话">+ 新对话</button>
-            <button onclick="showApiKeySettings()" title="设置 API Key">⚙ Key</button>
         </div>
     </div>
 
@@ -367,6 +366,70 @@ function renderPredictCard() {
         calendarNote = '<div style="font-size:10px;color:#FF9F43;margin-top:2px;">📅 明日为工作日，自然回落属正常现象</div>';
     }
 
+    // ---- 近N天预测回测 (MAPE) ----
+    var backtestN = Math.min(7, sorted.length - 2);
+    var backtestApes = [];
+    if (backtestN >= 2) {
+        for (var bi = sorted.length - backtestN - 1; bi < sorted.length - 1; bi++) {
+            var trainSlice = sorted.slice(0, bi + 1);
+            var btByType = { holiday:[], weekend:[], weekday:[] };
+            trainSlice.forEach(function(rr) {
+                var tt = getDayType(rr.stat_date);
+                btByType[tt].push(rr.daily_box || 0);
+            });
+            function btAvg(arr) { return arr.length ? arr.reduce(function(a,b){return a+b;},0)/arr.length : 0; }
+            var btAvgs = { holiday: btAvg(btByType.holiday), weekend: btAvg(btByType.weekend), weekday: btAvg(btByType.weekday) };
+            var btBL = btAvgs.weekday || btAvgs.weekend || btAvgs.holiday || 1;
+            var btMult = {
+                holiday: btAvgs.holiday > 0 ? btAvgs.holiday/btBL : 2.0,
+                weekend: btAvgs.weekend > 0 ? btAvgs.weekend/btBL : 1.3,
+                weekday: 1.0
+            };
+            var btAdj = trainSlice.map(function(rr) {
+                return (rr.daily_box||0) / (btMult[getDayType(rr.stat_date)] || 1);
+            });
+            var btEwma = [btAdj[0]];
+            for (var ej = 1; ej < btAdj.length; ej++) {
+                btEwma.push(alpha * btAdj[ej] + (1-alpha) * btEwma[ej-1]);
+            }
+            var btLastAdj = btAdj[btAdj.length-1];
+            var btLastEwma = btEwma[btEwma.length-1];
+            var btPredAdj = alpha * btLastAdj + (1-alpha) * btLastEwma;
+            var actualDate = sorted[bi+1].stat_date;
+            var btPredType = getDayType(actualDate);
+            var btPred = btPredAdj * (btMult[btPredType] || 1);
+            var actualVal = sorted[bi+1].daily_box || 0;
+            if (actualVal > 0) {
+                var ape = Math.abs(actualVal - btPred) / actualVal;
+                backtestApes.push({date: actualDate, pred: btPred, actual: actualVal, ape: ape});
+            }
+        }
+    }
+
+    var mapeHtml = '';
+    if (backtestApes.length >= 2) {
+        var totalApe = backtestApes.reduce(function(s, a) { return s + a.ape; }, 0);
+        var mapeVal = totalApe / backtestApes.length;
+        var accuracyColor = mapeVal < 0.1 ? '#64DCB4' : (mapeVal < 0.25 ? '#FFD700' : '#FF6B6B');
+        mapeHtml = '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">' +
+            '<div style="font-size:10px;opacity:0.5;margin-bottom:6px;">近' + backtestApes.length + '天预测回测 MAPE</div>' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+                '<span style="font-size:11px;">预测准确度</span>' +
+                '<span style="font-size:16px;font-weight:700;color:' + accuracyColor + ';">' + ((1-mapeVal)*100).toFixed(1) + '%</span>' +
+            '</div>';
+        backtestApes.forEach(function(a) {
+            var barW = Math.min(100, Math.max(5, a.ape * 400));
+            var barColor = a.ape < 0.1 ? '#64DCB4' : (a.ape < 0.25 ? '#FFD700' : '#FF6B6B');
+            mapeHtml += '<div style="display:flex;align-items:center;gap:4px;font-size:9px;margin-bottom:2px;">' +
+                '<span style="opacity:0.4;width:44px;">' + (a.date||'').slice(5) + '</span>' +
+                '<span style="display:inline-block;width:' + barW + 'px;height:4px;border-radius:2px;background:' + barColor + ';"></span>' +
+                '<span style="opacity:0.6;">' + (a.ape*100).toFixed(0) + '%</span>' +
+                '<span style="opacity:0.3;">预测' + fmtNum(a.pred) + ' vs 实际' + fmtNum(a.actual) + '万</span>' +
+            '</div>';
+        });
+        mapeHtml += '</div>';
+    }
+
     el.innerHTML =
         '<div>' +
             '<span class="predict-today-val" style="background:linear-gradient(135deg,#FF9F43,#FF6B6B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">' + fmtNum(latestBox) + '</span><span class="predict-today-unit">万</span>' +
@@ -389,7 +452,8 @@ function renderPredictCard() {
         '<div class="predict-model-note">' +
             '季节调整 EWMA · α=0.3 · 基于' + sorted.length + '日数据<br>' +
             '假期系数 ' + multipliers.holiday.toFixed(1) + 'x · 周末系数 ' + multipliers.weekend.toFixed(1) + 'x · 工作日基准 1.0x' +
-        '</div>';
+        '</div>' +
+        mapeHtml;
 }
 function renderAll() {
     [renderScoreCard, renderTotalCard, renderAmahCard, renderTodayCard,
@@ -774,20 +838,10 @@ function renderSummaryTable() {
     el.innerHTML = h;
 }
 
-// ==================== ChatBI (DeepSeek) ====================
-const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
-const DEEPSEEK_MODEL = 'deepseek-chat';
+// ==================== ChatBI (DeepSeek via BFF proxy) ====================
 const SYSTEM_PROMPT = '你是一个专业的 BI（商业智能）数据分析助手。请用分点、表格、结构化方式回答问题。若信息不足请明确说明，不要编造数据。';
 
 let chatHistory = [];
-
-function getApiKey() {
-    return localStorage.getItem('ds_api_key') || '';
-}
-
-function setApiKey(key) {
-    localStorage.setItem('ds_api_key', key);
-}
 
 function buildDataContext() {
     if (!allData) return '';
@@ -833,13 +887,6 @@ async function chatbiSend() {
     const q = input.value.trim();
     if (!q) return;
 
-    let apiKey = getApiKey();
-    if (!apiKey) {
-        apiKey = prompt('请输入 DeepSeek API Key（将保存在浏览器本地）:');
-        if (!apiKey || !apiKey.trim()) return;
-        setApiKey(apiKey.trim());
-    }
-
     input.value = '';
     const msgs = document.getElementById('chatbiMsgs');
 
@@ -860,18 +907,10 @@ async function chatbiSend() {
         messages.push(...chatHistory.slice(-30));
         messages.push({ role: 'user', content: q });
 
-        const response = await fetch(DEEPSEEK_API_URL, {
+        const response = await fetch('/api/chatbi', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + getApiKey(),
-            },
-            body: JSON.stringify({
-                model: DEEPSEEK_MODEL,
-                messages: messages,
-                temperature: 0.2,
-                max_tokens: 2048,
-            }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: messages }),
         });
 
         if (!response.ok) {
@@ -899,17 +938,6 @@ function clearChatHistory() {
     chatHistory = [];
     const msgs = document.getElementById('chatbiMsgs');
     msgs.innerHTML = '<div class="msg assistant"><div class="bubble">你好！我是五一档数据分析助手。<br>试试问：排名、上座率对比、日票房趋势、评分...</div></div>';
-}
-
-function showApiKeySettings() {
-    const current = getApiKey();
-    const masked = current ? current.slice(0, 8) + '...' + current.slice(-4) : '';
-    const msg = current ? '当前 Key: ' + masked + '\n输入新 Key（取消则不修改）:' : '请输入 DeepSeek API Key:';
-    const key = prompt(msg);
-    if (key !== null && key.trim()) {
-        setApiKey(key.trim());
-        alert('API Key 已保存');
-    }
 }
 
 // ==================== Utils ====================

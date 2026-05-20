@@ -1,0 +1,4 @@
+# Vercel Python Serverless Function 依赖
+# Vercel 部署时自动 pip install -r requirements.txt
+flask>=3.0.0
+requests>=2.31.0
