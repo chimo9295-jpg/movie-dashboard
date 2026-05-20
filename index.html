@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026五一档电影数据看板</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            min-height: 100vh;
+            background: #1a1530 url('bg.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: #fff; overflow-x: hidden;
+        }
+        .header { text-align: center; padding: 24px 20px 10px; z-index: 10; }
+        .header h1 { font-size: 28px; font-weight: 700; letter-spacing: 4px; text-shadow: 0 2px 12px rgba(0,0,0,0.5); }
+        .header .subtitle { font-size: 13px; opacity: 0.65; letter-spacing: 2px; margin-top: 2px; }
+
+        .dashboard { max-width: 1240px; margin: 0 auto; padding: 8px 24px 24px;
+            display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; justify-items: center; }
+
+        .card { background: rgba(10,8,24,0.65); border: 1px solid rgba(232,196,160,0.45);
+            border-radius: 14px; padding: 16px; width: 100%;
+            transition: all 0.3s; min-height: 140px; }
+        .card:hover { border-color: rgba(240,212,176,0.7); box-shadow: 0 0 24px rgba(232,196,160,0.12); }
+        .card-title { font-size: 13px; font-weight: 600; margin-bottom: 12px;
+            display: flex; align-items: center; gap: 8px; opacity: 0.85; }
+        .card-title .icon { width: 26px; height: 26px; border-radius: 7px;
+            display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+
+        .stat-card { grid-column: span 1; }
+        .big-num { font-size: 38px; font-weight: 800; line-height: 1; }
+        .gradient-text { background: linear-gradient(135deg, #FFD700, #FF6B6B);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .gradient-cyan { background: linear-gradient(135deg, #64DCB4, #4facfe);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .meta-row { display: flex; gap: 12px; margin-top: 10px; padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.1); flex-wrap: wrap; }
+        .meta-item { text-align: center; }
+        .meta-item .val { font-size: 15px; font-weight: 700; }
+        .meta-item .lbl { font-size: 10px; opacity: 0.55; margin-top: 2px; }
+
+        .chart-panel { grid-column: span 2; min-height: 340px; }
+        .chart-panel.span3 { grid-column: span 3; }
+        .chart-panel.full { grid-column: span 4; }
+        .chart-box { width: 100%; height: calc(100% - 38px); min-height: 280px; }
+        .chart-panel.full .chart-box { min-height: 360px; }
+
+        .chatbi-panel { grid-column: span 1; min-height: 340px; display: flex; flex-direction: column; }
+        .chatbi-messages { flex: 1; overflow-y: auto; padding: 4px 0;
+            display: flex; flex-direction: column; gap: 8px; max-height: 380px; min-height: 160px; font-size: 12px; }
+        .chatbi-messages .msg { max-width: 95%; }
+        .chatbi-messages .msg.user { align-self: flex-end; }
+        .chatbi-messages .msg.user .bubble { background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff; border-radius: 12px 12px 2px 12px; padding: 8px 12px; }
+        .chatbi-messages .msg.assistant { align-self: flex-start; }
+        .chatbi-messages .msg.assistant .bubble { background: rgba(255,255,255,0.1);
+            border-radius: 12px 12px 12px 2px; padding: 8px 12px; font-size: 11px; line-height: 1.5; }
+        .chatbi-input { display: flex; gap: 6px; margin-top: 8px; }
+        .chatbi-input input { flex: 1; padding: 8px 12px; border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08);
+            color: #fff; font-size: 12px; outline: none; }
+        .chatbi-input input:focus { border-color: #667eea; }
+        .chatbi-input button { padding: 8px 14px; border-radius: 16px; border: none;
+            background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;
+            cursor: pointer; font-size: 12px; white-space: nowrap; }
+
+        .summary-table { width: 100%; font-size: 11px; border-collapse: collapse; }
+        .summary-table th { text-align: left; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.15); opacity: 0.6; font-size:10px; }
+        .summary-table td { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+        .summary-table .bar-cell { position: relative; }
+        .summary-table .bar-inner { height: 6px; border-radius: 3px; display: inline-block; vertical-align: middle; margin-right: 6px; }
+
+        .update-time { text-align: center; padding: 6px; font-size: 11px; opacity: 0.4; }
+
+        .loading-inline { display: flex; align-items: center; justify-content: center; height: 80px; opacity: 0.4; }
+        .loading-inline::after { content: ''; width: 22px; height: 22px;
+            border: 2px solid rgba(255,255,255,0.15); border-top-color: rgba(255,255,255,0.6);
+            border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .result-table { width: 100%; font-size: 10px; border-collapse: collapse; margin-top: 4px; }
+        .result-table th { text-align: left; padding: 2px 6px; opacity: 0.5; }
+        .result-table td { padding: 2px 6px; }
+
+        /* ChatBI markdown content */
+        .chatbi-messages .bubble table { width: 100%; font-size: 10px; border-collapse: collapse; margin: 6px 0; }
+        .chatbi-messages .bubble table th { text-align: left; padding: 3px 6px; border-bottom: 1px solid rgba(255,255,255,0.2); opacity: 0.7; font-size: 10px; }
+        .chatbi-messages .bubble table td { padding: 3px 6px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 10px; }
+        .chatbi-messages .bubble code { background: rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 3px; font-size: 10px; }
+        .chatbi-messages .bubble pre { background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; overflow-x: auto; font-size: 10px; margin: 6px 0; }
+        .chatbi-messages .bubble ul, .chatbi-messages .bubble ol { padding-left: 16px; margin: 4px 0; }
+        .chatbi-messages .bubble li { margin: 2px 0; line-height: 1.5; }
+        .chatbi-messages .bubble strong { color: #FFD700; }
+        .chatbi-messages .bubble h1,.chatbi-messages .bubble h2,.chatbi-messages .bubble h3 { margin: 8px 0 4px; font-size: 13px; }
+        .chatbi-messages .bubble p { margin: 4px 0; }
+        .chatbi-messages .bubble hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 8px 0; }
+        .chatbi-toolbar { display: flex; gap: 4px; margin-top: 6px; }
+        .chatbi-toolbar button { padding: 4px 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: rgba(255,255,255,0.5); cursor: pointer; font-size: 10px; transition: all 0.2s; }
+        .chatbi-toolbar button:hover { border-color: rgba(255,255,255,0.4); color: rgba(255,255,255,0.8); }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>2026 五一档电影数据看板</h1>
+    <div class="subtitle">给阿嬷的情书 · 消失的人 · 寒战1994 · 穿普拉达的女王2</div>
+</div>
+
+<div class="dashboard">
+    <!-- Row 1: 4 stat cards -->
+    <div class="card stat-card">
+        <div class="card-title"><span class="icon" style="background:rgba(255,215,0,0.18);color:#FFD700;">★</span>豆瓣评分</div>
+        <div id="score-card"><div class="loading-inline"></div></div>
+    </div>
+    <div class="card stat-card">
+        <div class="card-title"><span class="icon" style="background:rgba(255,107,107,0.18);color:#FF6B6B;">¥</span>档期总票房</div>
+        <div id="total-card"><div class="loading-inline"></div></div>
+    </div>
+    <div class="card stat-card">
+        <div class="card-title"><span class="icon" style="background:rgba(232,196,160,0.2);color:#E8C4A0;">◈</span>给阿嬷的情书</div>
+        <div id="amah-card"><div class="loading-inline"></div></div>
+    </div>
+    <div class="card stat-card">
+        <div class="card-title"><span class="icon" style="background:rgba(100,200,255,0.18);color:#64C8FF;">◆</span>今日大盘</div>
+        <div id="today-card"><div class="loading-inline"></div></div>
+    </div>
+
+    <!-- Row 2: dual-axis chart (阿嬷的情书 累计票房 & 评分人数) + ChatBI -->
+    <div class="card chart-panel span3">
+        <div class="card-title"><span class="icon" style="background:rgba(100,220,180,0.18);color:#64DCB4;">📈</span>累计票房 & 评分人数对比（给阿嬷的情书）</div>
+        <div id="chart-dual" class="chart-box"></div>
+    </div>
+    <div class="card chatbi-panel">
+        <div class="card-title"><span class="icon" style="background:rgba(150,120,255,0.18);color:#C896FF;">🤖</span>AI数据分析助手</div>
+        <div class="chatbi-messages" id="chatbiMsgs">
+            <div class="msg assistant"><div class="bubble">你好！我是五一档数据分析助手。<br>试试问：排名、上座率对比、日票房趋势、评分...</div></div>
+        </div>
+        <div class="chatbi-input">
+            <input type="text" id="chatbiInput" placeholder="输入问题..." onkeydown="if(event.key==='Enter')chatbiSend()">
+            <button onclick="chatbiSend()">发送</button>
+        </div>
+        <div class="chatbi-toolbar">
+            <button onclick="clearChatHistory()" title="新建对话">+ 新对话</button>
+            <button onclick="showApiKeySettings()" title="设置 API Key">⚙ Key</button>
+        </div>
+    </div>
+
+    <!-- Row 3: 四部电影日票房对比 + 累计票房对比 -->
+    <div class="card chart-panel">
+        <div class="card-title"><span class="icon" style="background:rgba(240,147,251,0.18);color:#f093fb;">📉</span>四部电影日票房对比</div>
+        <div id="chart-daily-comp" class="chart-box"></div>
+    </div>
+    <div class="card chart-panel">
+        <div class="card-title"><span class="icon" style="background:rgba(100,220,180,0.18);color:#64DCB4;">📊</span>累计票房对比</div>
+        <div id="chart-accum" class="chart-box"></div>
+    </div>
+
+    <!-- Row 4: 雷达图 + 数据汇总表 -->
+    <div class="card stat-card">
+        <div class="card-title"><span class="icon" style="background:rgba(200,150,255,0.18);color:#C896FF;">◎</span>综合实力雷达图</div>
+        <div id="chart-radar" style="height:300px;"></div>
+    </div>
+    <div class="card" style="grid-column:span 3;">
+        <div class="card-title"><span class="icon" style="background:rgba(255,159,67,0.18);color:#FF9F43;">📋</span>五一档数据汇总</div>
+        <div id="summary-table-wrap"><div class="loading-inline"></div></div>
+    </div>
+</div>
+
+<div class="update-time" id="updateTime"></div>
+
+<script>
+// ==================== Supabase ====================
+const SB = {
+    url: 'https://ebmncqnzammtplpwlveb.supabase.co/rest/v1',
+    key: 'sb_publishable_36nGYLplp0DYcGbTx6GWpA_K11Jb9Gd'
+};
+function sbFetch(path) {
+    return fetch(SB.url + path, {
+        headers: { 'apikey': SB.key, 'Authorization': 'Bearer ' + SB.key }
+    }).then(r => r.json());
+}
+
+// ==================== Global State ====================
+let allData = null;
+let charts = {};
+const AMAH_ID = 1516982;
+const MOVIES = [
+    { id: 1516982, name: '给阿嬷的情书', color: '#FF6B6B' },
+    { id: 1528954, name: '消失的人', color: '#4facfe' },
+    { id: 1525209, name: '寒战1994', color: '#FFD700' },
+    { id: 1528750, name: '穿普拉达的女王2', color: '#64DCB4' },
+];
+
+// ==================== Load Data ====================
+async function loadAllData() {
+    try {
+        const [movies, dailyStats, dashboard, realtime, comments] = await Promise.all([
+            sbFetch('/mayday_movies?order=movie_id.asc'),
+            sbFetch('/mayday_daily_stats?order=stat_date.asc&limit=200'),
+            sbFetch('/mayday_dashboard?order=movie_id.asc&limit=10'),
+            sbFetch('/movie_realtime?order=crawl_time.asc&limit=100'),
+            sbFetch('/douban_comments?limit=100'),
+        ]);
+
+        const dailyByMovie = {};
+        (dailyStats||[]).forEach(d => {
+            const mid = d.movie_id;
+            if (!dailyByMovie[mid]) dailyByMovie[mid] = [];
+            dailyByMovie[mid].push(d);
+        });
+
+        const dashByMovie = {};
+        (dashboard||[]).forEach(d => {
+            dashByMovie[d.movie_id] = d;
+        });
+
+        const latestRT = (realtime||[]).length ? realtime[realtime.length-1] : {};
+
+        allData = {
+            movies, dailyStats, dashboard, dailyByMovie, dashByMovie,
+            realtime: latestRT, realtime_all: realtime||[],
+            comments: comments||[],
+        };
+        console.log('Data loaded:', movies.length, 'movies,', dailyStats.length, 'daily records');
+        renderAll();
+    } catch(e) {
+        console.error('Load failed:', e);
+        document.getElementById('total-card').innerHTML =
+            '<div style="color:#FF6B6B;padding:20px;">加载失败: ' + e.message + '</div>';
+    }
+}
+
+// ==================== Render All ====================
+function renderAll() {
+    [renderScoreCard, renderTotalCard, renderAmahCard, renderTodayCard,
+     renderDualChart, renderDailyCompChart, renderAccumChart,
+     renderRadarChart, renderSummaryTable].forEach(fn => {
+        try { fn(); } catch(e) { console.error(fn.name + ' error:', e); }
+    });
+    try {
+        const latest = getLatestDate();
+        document.getElementById('updateTime').textContent =
+            '数据更新: ' + new Date().toLocaleString('zh-CN') +
+            ' | 最新数据日期: ' + latest +
+            ' | 影片: ' + (allData.movies||[]).length + '部';
+    } catch(e) {}
+}
+
+function getLatestDate() {
+    const ds = allData.dailyStats||[];
+    if (!ds.length) return '--';
+    return ds.reduce((max, d) => d.stat_date > max ? d.stat_date : max, '');
+}
+
+// ==================== Douban 评分卡片 ====================
+function renderScoreCard() {
+    const el = document.getElementById('score-card');
+    const rt = allData.realtime || {};
+    const score = rt.douban_score || '--';
+    const votes = rt.douban_votes ? (rt.douban_votes/10000).toFixed(1)+'万' : '--';
+    el.innerHTML = `
+        <div class="big-num gradient-text">${score}</div>
+        <div style="font-size:11px;opacity:0.6;margin-top:4px;">豆瓣评分</div>
+        <div class="meta-row">
+            <div class="meta-item"><div class="val">${votes}</div><div class="lbl">评分人数</div></div>
+        </div>`;
+}
+
+// ==================== 档期总票房 ====================
+function renderTotalCard() {
+    const el = document.getElementById('total-card');
+    const d = allData.dailyByMovie||{};
+
+    let latestTotal = 0;
+    MOVIES.forEach(m => {
+        const records = d[m.id]||[];
+        const last = records[records.length-1];
+        if (last) latestTotal += last.total_box||0;
+    });
+
+    el.innerHTML = `
+        <div style="position:relative;display:inline-block;">
+            <div class="big-num gradient-cyan">${(latestTotal/10000).toFixed(2)}</div>
+            <span style="position:absolute;right:0;bottom:4px;font-size:12px;opacity:0.5;">亿</span>
+        </div>
+        <div style="font-size:11px;opacity:0.6;margin-top:4px;">四部电影综合累计</div>
+        <div class="meta-row">
+            <div class="meta-item"><div class="val">${allData.movies?.length||0}部</div><div class="lbl">在映</div></div>
+            <div class="meta-item"><div class="val">${(allData.dailyStats?.length||0)}条</div><div class="lbl">记录</div></div>
+        </div>`;
+}
+
+// ==================== 给阿嬷的情书 卡片 ====================
+function renderAmahCard() {
+    const el = document.getElementById('amah-card');
+    const d = allData.dailyByMovie||{};
+    const records = d[AMAH_ID]||[];
+    const last = records[records.length-1]||{};
+    const dash = allData.dashByMovie||{};
+    const dd = dash[AMAH_ID]||{};
+
+    el.innerHTML = `
+        <div style="position:relative;display:inline-block;">
+            <div class="big-num" style="background:linear-gradient(135deg,#FFD700,#FF6B6B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">${((last.total_box||0)/10000).toFixed(2)}</div>
+            <span style="position:absolute;right:0;bottom:4px;font-size:12px;opacity:0.5;">亿</span>
+        </div>
+        <div style="font-size:11px;opacity:0.6;margin-top:4px;">累计票房</div>
+        <div class="meta-row">
+            <div class="meta-item"><div class="val">${fmtNum(last.daily_box)}万</div><div class="lbl">最新日票房</div></div>
+            <div class="meta-item"><div class="val">${dd.avg_seat_view||'--'}</div><div class="lbl">上座率</div></div>
+        </div>`;
+}
+
+// ==================== 今日大盘 ====================
+function renderTodayCard() {
+    const el = document.getElementById('today-card');
+    const d = allData.dailyByMovie||{};
+    const dash = allData.dashByMovie||{};
+
+    let todayDaily = 0;
+    const latest = getLatestDate();
+    MOVIES.forEach(m => {
+        const records = d[m.id]||[];
+        const today = records.find(r => r.stat_date === latest);
+        if (today) todayDaily += today.daily_box||0;
+    });
+
+    const topMovie = MOVIES.reduce((best, m) => {
+        const dd = dash[m.id];
+        const cur = dd ? parseFloat(dd.box_rate)||0 : 0;
+        const bestVal = dash[best.id] ? parseFloat(dash[best.id].box_rate)||0 : 0;
+        return cur > bestVal ? m : best;
+    }, MOVIES[0]);
+
+    el.innerHTML = `
+        <div style="font-size:11px;opacity:0.5;margin-bottom:2px;">最新日大盘票房</div>
+        <div style="font-size:30px;font-weight:800;">${fmtNum(todayDaily)}<span style="font-size:12px;opacity:0.5;"> 万</span></div>
+        <div style="margin-top:14px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);font-size:11px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="opacity:0.5;">票房冠军</span><span style="color:#FFD700;">${topMovie.name}</span></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="opacity:0.5;">票房占比</span><span>${dash[topMovie.id]?.box_rate||'--'}</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="opacity:0.5;">数据日期</span><span>${latest}</span></div>
+        </div>`;
+}
+
+// ==================== 双轴图：阿嬷的情书 累计票房 + 豆瓣评分人数 ====================
+function renderDualChart() {
+    const el = document.getElementById('chart-dual');
+    if (charts.dual) charts.dual.dispose();
+
+    const d = allData.dailyByMovie||{};
+    const amahRecords = d[AMAH_ID]||[];
+    const dates = amahRecords.map(r => r.stat_date ? r.stat_date.slice(5) : '');
+    const totalBoxData = amahRecords.map(r => r.total_box||0);
+
+    // Align Douban votes by date
+    const vMap = {};
+    (allData.realtime_all||[]).forEach(r => { if(r.crawl_date) vMap[r.crawl_date]=r.douban_votes; });
+    const votesData = amahRecords.map(r => vMap[r.stat_date] != null ? vMap[r.stat_date] : null);
+
+    const chart = echarts.init(el);
+    charts.dual = chart;
+    chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger:'axis', backgroundColor:'rgba(0,0,0,0.75)', borderColor:'rgba(255,255,255,0.1)', textStyle:{color:'#fff',fontSize:12},
+            formatter: function(params) {
+                let s = '<b>'+params[0].name+'</b><br/>';
+                params.forEach(p => {
+                    if(p.seriesIndex===0) s+=p.marker+' 累计票房：'+(p.value/10000).toFixed(2)+' 亿<br/>';
+                    else s+=p.marker+' 评分人数：'+(p.value/10000).toFixed(1)+' 万<br/>';
+                });
+                return s;
+            }},
+        legend: { data:['累计票房','豆瓣评分人数'], bottom:0, textStyle:{color:'rgba(255,255,255,0.6)',fontSize:11} },
+        grid: { left:55, right:55, top:18, bottom:36 },
+        xAxis: { type:'category', data:dates, axisLine:{lineStyle:{color:'rgba(255,255,255,0.12)'}}, axisLabel:{color:'rgba(255,255,255,0.5)',fontSize:10} },
+        yAxis: [
+            { type:'value', name:'万元', nameTextStyle:{color:'rgba(255,255,255,0.5)',fontSize:10},
+              splitLine:{lineStyle:{color:'rgba(255,255,255,0.05)'}}, axisLabel:{color:'rgba(255,255,255,0.5)',fontSize:10, formatter:v=>v>=10000?(v/10000).toFixed(1)+'亿':v} },
+            { type:'value', name:'人数', nameTextStyle:{color:'rgba(255,255,255,0.5)',fontSize:10},
+              splitLine:{show:false}, axisLabel:{color:'rgba(255,255,255,0.5)',fontSize:10, formatter:v=>(v/10000).toFixed(1)+'万'} }
+        ],
+        series: [
+            { name:'累计票房', type:'line', data:totalBoxData, smooth:true, symbol:'none',
+              lineStyle:{color:'#64DCB4',width:2.5},
+              areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(100,220,180,0.25)'},{offset:1,color:'rgba(100,220,180,0.02)'}])} },
+            { name:'豆瓣评分人数', type:'line', yAxisIndex:1, data:votesData,
+              smooth:true, connectNulls:true, symbol:'circle', symbolSize:5, lineStyle:{color:'#FFD700',width:2}, itemStyle:{color:'#FFD700'} }
+        ]
+    });
+}
+
+// ==================== 累计票房对比（4部） ====================
+function renderAccumChart() {
+    const el = document.getElementById('chart-accum');
+    if (charts.accum) charts.accum.dispose();
+
+    const d = allData.dailyByMovie||{};
+    const dates = [...new Set(
+        MOVIES.flatMap(m => (d[m.id]||[]).map(r => r.stat_date))
+    )].sort();
+
+    const chart = echarts.init(el);
+    charts.accum = chart;
+
+    const series = MOVIES.map(m => ({
+        name: m.name,
+        type: 'line',
+        data: dates.map(date => {
+            const rec = (d[m.id]||[]).find(r => r.stat_date === date);
+            return rec ? (rec.total_box / 10000) : null;
+        }),
+        smooth: true,
+        symbol: 'none',
+        lineStyle: { color: m.color, width: 2.5 },
+        areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: m.color + '44' },
+                { offset: 1, color: m.color + '04' }
+            ])
+        },
+    }));
+
+    chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: {
+            trigger: 'axis',
+            backgroundColor: 'rgba(0,0,0,0.75)',
+            borderColor: 'rgba(255,255,255,0.1)',
+            textStyle: { color: '#fff', fontSize: 12 },
+            formatter: function(params) {
+                let s = '<b>' + params[0].name + '</b><br/>';
+                params.sort((a,b) => (b.value||0) - (a.value||0));
+                params.forEach(p => {
+                    if (p.value != null) s += p.marker + ' ' + p.seriesName + ': ' + p.value.toFixed(2) + ' 亿<br/>';
+                });
+                return s;
+            }
+        },
+        legend: { data: MOVIES.map(m => m.name), bottom: 0, textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: 10 } },
+        grid: { left: 55, right: 30, top: 18, bottom: 36 },
+        xAxis: {
+            type: 'category', data: dates.map(d => d.slice(5)),
+            axisLine: { lineStyle: { color: 'rgba(255,255,255,0.12)' } },
+            axisLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 10, rotate: 30 }
+        },
+        yAxis: {
+            type: 'value', name: '亿', nameTextStyle: { color: 'rgba(255,255,255,0.5)', fontSize: 10 },
+            splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+            axisLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 10, formatter: v => v.toFixed(1) + '亿' }
+        },
+        series
+    });
+}
+
+// ==================== 四部电影日票房对比 ====================
+function renderDailyCompChart() {
+    const el = document.getElementById('chart-daily-comp');
+    if (charts.dailyComp) charts.dailyComp.dispose();
+
+    const d = allData.dailyByMovie||{};
+    const dates = [...new Set(
+        MOVIES.flatMap(m => (d[m.id]||[]).map(r => r.stat_date))
+    )].sort();
+
+    const chart = echarts.init(el);
+    charts.dailyComp = chart;
+
+    const series = MOVIES.map(m => ({
+        name: m.name,
+        type: 'line',
+        data: dates.map(date => {
+            const rec = (d[m.id]||[]).find(r => r.stat_date === date);
+            return rec ? rec.daily_box : null;
+        }),
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 3,
+        lineStyle: { color: m.color, width: 2 },
+        itemStyle: { color: m.color },
+    }));
+
+    chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: {
+            trigger: 'axis',
+            backgroundColor: 'rgba(0,0,0,0.75)',
+            borderColor: 'rgba(255,255,255,0.1)',
+            textStyle: { color: '#fff', fontSize: 12 },
+            formatter: function(params) {
+                let s = '<b>' + params[0].name + '</b><br/>';
+                params.sort((a,b) => (b.value||0) - (a.value||0));
+                params.forEach(p => {
+                    if (p.value != null) s += p.marker + ' ' + p.seriesName + ': ' + fmtNum(p.value) + ' 万<br/>';
+                });
+                return s;
+            }
+        },
+        legend: { data: MOVIES.map(m => m.name), bottom: 0, textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: 10 } },
+        grid: { left: 55, right: 30, top: 18, bottom: 36 },
+        xAxis: {
+            type: 'category', data: dates.map(d => d.slice(5)),
+            axisLine: { lineStyle: { color: 'rgba(255,255,255,0.12)' } },
+            axisLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 10, rotate: 30 }
+        },
+        yAxis: {
+            type: 'value', name: '万元', nameTextStyle: { color: 'rgba(255,255,255,0.5)', fontSize: 10 },
+            splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+            axisLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 10 }
+        },
+        series
+    });
+}
+
+// ==================== 雷达图 ====================
+function renderRadarChart() {
+    const el = document.getElementById('chart-radar');
+    if (charts.radar) charts.radar.dispose();
+
+    const dash = allData.dashByMovie||{};
+    const d = allData.dailyByMovie||{};
+
+    const indicators = [
+        { name: '日票房', max: 6000 },
+        { name: '累计票房(亿)', max: 7 },
+        { name: '上座率(%)', max: 8 },
+        { name: '排片占比(%)', max: 50 },
+        { name: '票房占比(%)', max: 90 },
+    ];
+
+    const chart = echarts.init(el);
+    charts.radar = chart;
+
+    const seriesData = MOVIES.map(m => {
+        const dd = dash[m.id]||{};
+        const records = d[m.id]||[];
+        const lastRec = records[records.length-1]||{};
+
+        return {
+            name: m.name,
+            value: [
+                lastRec.daily_box || 0,
+                (lastRec.total_box || 0) / 10000,
+                parseFloat(dd.avg_seat_view) || 0,
+                parseFloat(dd.show_count_rate) || 0,
+                parseFloat(dd.box_rate) || 0,
+            ],
+            lineStyle: { color: m.color, width: 2 },
+            areaStyle: { color: m.color + '22' },
+            itemStyle: { color: m.color },
+        };
+    });
+
+    chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: {
+            trigger: 'item',
+            backgroundColor: 'rgba(0,0,0,0.75)',
+            borderColor: 'rgba(255,255,255,0.1)',
+            textStyle: { color: '#fff', fontSize: 11 },
+        },
+        legend: {
+            data: MOVIES.map(m => m.name),
+            bottom: 0,
+            textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: 9 },
+            itemWidth: 12, itemHeight: 8,
+        },
+        radar: {
+            center: ['50%', '48%'],
+            radius: '60%',
+            indicator: indicators,
+            axisName: { color: 'rgba(255,255,255,0.5)', fontSize: 9 },
+            splitLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+            splitArea: { areaStyle: { color: ['rgba(255,255,255,0.02)', 'rgba(255,255,255,0.04)'] } },
+            axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+        },
+        series: [{ type: 'radar', data: seriesData, symbol: 'circle', symbolSize: 4 }]
+    });
+}
+
+// ==================== 数据汇总表 ====================
+function renderSummaryTable() {
+    const el = document.getElementById('summary-table-wrap');
+    const dash = allData.dashByMovie||{};
+    const d = allData.dailyByMovie||{};
+
+    let h = '<table class="summary-table"><thead><tr>';
+    h += '<th>电影</th><th>最新日票房(万)</th><th>综合累计(亿)</th><th>上座率</th><th>排片占比</th><th>票房占比</th><th>上映天数</th>';
+    h += '</tr></thead><tbody>';
+
+    const maxDaily = Math.max(...MOVIES.map(m => {
+        const records = d[m.id]||[];
+        const last = records[records.length-1];
+        return last ? last.daily_box : 0;
+    }));
+
+    MOVIES.forEach(m => {
+        const dd = dash[m.id]||{};
+        const records = d[m.id]||[];
+        const lastRec = records[records.length-1]||{};
+        const days = records.length;
+        const dailyBar = maxDaily > 0 ? ((lastRec.daily_box||0) / maxDaily * 100) : 0;
+
+        h += '<tr>';
+        h += `<td style="font-weight:700;color:${m.color}">${m.name}</td>`;
+        h += `<td class="bar-cell"><span class="bar-inner" style="width:${dailyBar*0.8}px;background:${m.color};"></span>${fmtNum(lastRec.daily_box)}</td>`;
+        h += `<td>${((lastRec.total_box||0)/10000).toFixed(2)}</td>`;
+        h += `<td>${dd.avg_seat_view||'--'}</td>`;
+        h += `<td>${dd.show_count_rate||'--'}</td>`;
+        h += `<td>${dd.box_rate||'--'}</td>`;
+        h += `<td>${days}天</td>`;
+        h += '</tr>';
+    });
+    h += '</tbody></table>';
+    el.innerHTML = h;
+}
+
+// ==================== ChatBI (DeepSeek) ====================
+const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+const DEEPSEEK_MODEL = 'deepseek-chat';
+const SYSTEM_PROMPT = '你是一个专业的 BI（商业智能）数据分析助手。请用分点、表格、结构化方式回答问题。若信息不足请明确说明，不要编造数据。';
+
+let chatHistory = [];
+
+function getApiKey() {
+    return localStorage.getItem('ds_api_key') || '';
+}
+
+function setApiKey(key) {
+    localStorage.setItem('ds_api_key', key);
+}
+
+function buildDataContext() {
+    if (!allData) return '';
+    const d = allData.dailyByMovie || {};
+    const dash = allData.dashByMovie || {};
+    const rt = allData.realtime || {};
+
+    let ctx = '以下是当前电影数据看板的最新数据，请基于这些数据回答用户问题：\n\n';
+
+    ctx += `豆瓣评分: ${rt.douban_score || '--'} (${rt.douban_votes ? (rt.douban_votes/10000).toFixed(1)+'万' : '--'}人评分)\n`;
+    ctx += `评分分布 - 五星:${rt.star_5_pct||'--'}, 四星:${rt.star_4_pct||'--'}, 三星:${rt.star_3_pct||'--'}, 二星:${rt.star_2_pct||'--'}, 一星:${rt.star_1_pct||'--'}\n\n`;
+
+    ctx += '各电影汇总数据:\n';
+    ctx += '| 电影 | 累计票房(亿) | 最新日票房(万) | 上座率 | 排片占比 | 票房占比 | 上映天数 |\n';
+    ctx += '|------|-------------|---------------|--------|---------|---------|--------|\n';
+    MOVIES.forEach(m => {
+        const records = d[m.id] || [];
+        const last = records[records.length - 1] || {};
+        const dd = dash[m.id] || {};
+        ctx += `| ${m.name} | ${((last.total_box||0)/10000).toFixed(2)} | ${fmtNum(last.daily_box)} | ${dd.avg_seat_view||'--'} | ${dd.show_count_rate||'--'} | ${dd.box_rate||'--'} | ${records.length}天 |\n`;
+    });
+
+    const dates = [...new Set(MOVIES.flatMap(m => (d[m.id]||[]).map(r => r.stat_date)))].sort();
+    const recentDates = dates.slice(-7);
+    if (recentDates.length > 0) {
+        ctx += '\n最近7天日票房(万元):\n';
+        ctx += '| 日期 | ' + MOVIES.map(m => m.name).join(' | ') + ' |\n';
+        ctx += '|------|' + MOVIES.map(() => '---|').join('') + '\n';
+        recentDates.forEach(date => {
+            ctx += `| ${date} | `;
+            ctx += MOVIES.map(m => {
+                const rec = (d[m.id]||[]).find(r => r.stat_date === date);
+                return rec ? rec.daily_box.toFixed(0) : '-';
+            }).join(' | ');
+            ctx += ' |\n';
+        });
+    }
+    return ctx;
+}
+
+async function chatbiSend() {
+    const input = document.getElementById('chatbiInput');
+    const q = input.value.trim();
+    if (!q) return;
+
+    let apiKey = getApiKey();
+    if (!apiKey) {
+        apiKey = prompt('请输入 DeepSeek API Key（将保存在浏览器本地）:');
+        if (!apiKey || !apiKey.trim()) return;
+        setApiKey(apiKey.trim());
+    }
+
+    input.value = '';
+    const msgs = document.getElementById('chatbiMsgs');
+
+    msgs.innerHTML += `<div class="msg user"><div class="bubble">${esc(q)}</div></div>`;
+    msgs.innerHTML += '<div class="msg assistant"><div class="bubble"><div class="loading-inline"></div></div></div>';
+    msgs.scrollTop = msgs.scrollHeight;
+
+    try {
+        const messages = [
+            { role: 'system', content: SYSTEM_PROMPT },
+        ];
+
+        const dataCtx = buildDataContext();
+        if (dataCtx) {
+            messages.push({ role: 'system', content: dataCtx });
+        }
+
+        messages.push(...chatHistory.slice(-30));
+        messages.push({ role: 'user', content: q });
+
+        const response = await fetch(DEEPSEEK_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + getApiKey(),
+            },
+            body: JSON.stringify({
+                model: DEEPSEEK_MODEL,
+                messages: messages,
+                temperature: 0.2,
+                max_tokens: 2048,
+            }),
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error?.message || 'API 请求失败 (' + response.status + ')');
+        }
+
+        const result = await response.json();
+        const reply = result.choices[0].message.content;
+
+        chatHistory.push({ role: 'user', content: q });
+        chatHistory.push({ role: 'assistant', content: reply });
+
+        msgs.lastChild.remove();
+        msgs.innerHTML += `<div class="msg assistant"><div class="bubble">${marked.parse(reply)}</div></div>`;
+        msgs.scrollTop = msgs.scrollHeight;
+    } catch (e) {
+        msgs.lastChild.remove();
+        msgs.innerHTML += `<div class="msg assistant"><div class="bubble" style="color:#FF6B6B;">${esc('错误: ' + e.message)}</div></div>`;
+        msgs.scrollTop = msgs.scrollHeight;
+    }
+}
+
+function clearChatHistory() {
+    chatHistory = [];
+    const msgs = document.getElementById('chatbiMsgs');
+    msgs.innerHTML = '<div class="msg assistant"><div class="bubble">你好！我是五一档数据分析助手。<br>试试问：排名、上座率对比、日票房趋势、评分...</div></div>';
+}
+
+function showApiKeySettings() {
+    const current = getApiKey();
+    const masked = current ? current.slice(0, 8) + '...' + current.slice(-4) : '';
+    const msg = current ? '当前 Key: ' + masked + '\n输入新 Key（取消则不修改）:' : '请输入 DeepSeek API Key:';
+    const key = prompt(msg);
+    if (key !== null && key.trim()) {
+        setApiKey(key.trim());
+        alert('API Key 已保存');
+    }
+}
+
+// ==================== Utils ====================
+function fmtNum(n) {
+    if (n==null||isNaN(n)) return '--';
+    if (Math.abs(n)>=10000) return (n/10000).toFixed(2);
+    return Number(n).toLocaleString('zh-CN',{maximumFractionDigits:1});
+}
+function esc(s) {
+    const d=document.createElement('div'); d.textContent=s; return d.innerHTML;
+}
+
+// ==================== Init ====================
+document.addEventListener('DOMContentLoaded', () => {
+    loadAllData();
+    setInterval(loadAllData, 300000);
+});
+window.addEventListener('resize', () => {
+    Object.values(charts).forEach(c => { try { c.resize(); } catch(e){} });
+});
+</script>
+</body>
+</html>
