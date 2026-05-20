@@ -62,6 +62,7 @@ from supabase import create_client, Client
 # ============================================================
 BRIGHTDATA_TOKEN = os.environ.get("BRIGHTDATA_TOKEN", "")
 BRIGHTDATA_API_URL = os.environ.get("BRIGHTDATA_API_URL", "https://api.brightdata.com/request")
+BRIGHTDATA_ZONE = os.environ.get("BRIGHTDATA_ZONE", "cli_unlocker")
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://ebmncqnzammtplpwlveb.supabase.co")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "sb_publishable_36nGYLplp0DYcGbTx6GWpA_K11Jb9Gd")
@@ -117,7 +118,7 @@ def brightdata_fetch(url: str, timeout: int = CRAWL_TIMEOUT) -> Optional[bytes]:
                     "Authorization": f"Bearer {token}",
                     "Content-Type": "application/json",
                 },
-                json={"url": url, "format": "raw"},
+                json={"zone": BRIGHTDATA_ZONE, "url": url, "format": "raw"},
                 timeout=timeout,
             )
             if resp.status_code != 200:

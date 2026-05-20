@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 BRIGHTDATA_TOKEN = os.environ.get("BRIGHTDATA_TOKEN", "")
 BRIGHTDATA_API_URL = os.environ.get("BRIGHTDATA_API_URL", "https://api.brightdata.com/request")
+BRIGHTDATA_ZONE = os.environ.get("BRIGHTDATA_ZONE", "cli_unlocker")
 MOVIE_DETAIL_URL = "https://piaofang.maoyan.com/movie/1516982"
 DASHBOARD_URL = "https://piaofang.maoyan.com/dashboard-ajax"
 TARGET_MOVIE = "给阿嬷的情书"
@@ -59,7 +60,7 @@ def fetch_dashboard_box(movie_id: int) -> tuple:
     if not raw:
         return 0, 0, PRE_SALE_BOX_FALLBACK, 0.0
     try:
-        data = json.loads(raw.decode('utf-8'))
+        data = json.loads(raw) if isinstance(raw, str) else json.loads(raw.decode('utf-8'))
         movie_list = data.get('movieList', {}).get('data', {}).get('list', [])
         for m in movie_list:
             mi = m.get('movieInfo', {})
@@ -101,7 +102,7 @@ def brightdata_fetch(url: str, timeout: int = 120, max_retries: int = 3) -> Opti
                     "Authorization": f"Bearer {token}",
                     "Content-Type": "application/json",
                 },
-                json={"url": url, "format": "raw"},
+                json={"zone": BRIGHTDATA_ZONE, "url": url, "format": "raw"},
                 timeout=timeout,
             )
             if resp.status_code != 200:
@@ -261,7 +262,7 @@ def main():
             success += 1
         time.sleep(0.3)  # 避免请求过快
 
-    logger.info(f"\n✅ 完成: {success}/{len(records)} 条数据保存成功")
+    logger.info(f"\n[完成] {success}/{len(records)} 条数据保存成功")
 
 
 if __name__ == "__main__":
