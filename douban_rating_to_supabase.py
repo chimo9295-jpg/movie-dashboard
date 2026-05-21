@@ -17,7 +17,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 def fetch_rating():
     url = "https://api.justoneapi.com/api/douban/get-subject-detail/v1"
     params = {"token": TOKEN, "subjectId": SUBJECT_ID}
-    resp = requests.get(url, params=params)
+    resp = requests.get(url, params=params, timeout=30)
     if resp.status_code != 200:
         return None, None
     data = resp.json()

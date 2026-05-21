@@ -17,5 +17,3 @@ typing-extensions>=4.8.0
 # 字体解析（猫眼 woff 反爬解码）
 fonttools>=4.45.0
 
-# 数据处理（可选）
-pandas>=2.0.0

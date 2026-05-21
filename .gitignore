@@ -1,0 +1,21 @@
+.vercel
+mayday_dashboard.html
+
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Runtime artifacts
+api_call_cache.json
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/

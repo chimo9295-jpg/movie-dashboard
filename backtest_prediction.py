@@ -46,7 +46,7 @@ def fetch_daily_data():
     resp = requests.get(url, headers={
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}",
-    })
+    }, timeout=30)
     resp.raise_for_status()
     return resp.json()
 

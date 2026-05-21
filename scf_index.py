@@ -48,7 +48,6 @@ def main_handler(event, context):
             "status": "ok",
             "deepseek_key_configured": bool(api_key),
             "deepseek_key_valid": key_ok,
-            "key_prefix": (api_key[:7] + "...") if api_key else "(empty)",
         })
 
     # POST 转发到 DeepSeek
@@ -78,8 +77,7 @@ def main_handler(event, context):
 
     if not api_key.startswith("sk-"):
         return _json_reply({
-            "error": f"DEEPSEEK_API_KEY 格式异常（应以 sk- 开头）",
-            "key_prefix": api_key[:7] + "..." if len(api_key) > 7 else api_key,
+            "error": "DEEPSEEK_API_KEY 格式异常（应以 sk- 开头）",
         }, 500)
 
     # 调用 DeepSeek API

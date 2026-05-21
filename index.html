@@ -921,7 +921,7 @@ async function chatbiSend() {
         }
 
         const result = await response.json();
-        const reply = result.choices[0].message.content;
+        const reply = result?.choices?.[0]?.message?.content || 'AI 返回了空响应，请重试';
 
         chatHistory.push({ role: 'user', content: q });
         chatHistory.push({ role: 'assistant', content: reply });
