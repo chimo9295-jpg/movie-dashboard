@@ -194,7 +194,7 @@
 
 <script>
 // ==================== Supabase ====================
-const CHATBI_API = 'https://movie-dashboard-beta.vercel.app/api/chatbi';
+const DEEPSEEK_API_KEY = 'YOUR_DEEPSEEK_API_KEY'; // TODO: 替换为你的 DeepSeek API Key
 const SB = {
     url: 'https://ebmncqnzammtplpwlveb.supabase.co/rest/v1',
     key: 'sb_publishable_36nGYLplp0DYcGbTx6GWpA_K11Jb9Gd'
@@ -908,10 +908,18 @@ async function chatbiSend() {
         messages.push(...chatHistory.slice(-30));
         messages.push({ role: 'user', content: q });
 
-        const response = await fetch(CHATBI_API, {
+        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: messages }),
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + DEEPSEEK_API_KEY,
+            },
+            body: JSON.stringify({
+                model: 'deepseek-chat',
+                messages: messages,
+                temperature: 0.2,
+                max_tokens: 2048,
+            }),
         });
 
         if (!response.ok) {
