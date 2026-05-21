@@ -660,8 +660,8 @@ function renderDualChart() {
                 });
                 return s;
             }},
-        legend: { data:['累计票房','豆瓣评分人数'], bottom: isMobile() ? 10 : 0, textStyle:{color:'rgba(255,255,255,0.6)',fontSize: isMobile() ? 10 : 11} },
-        grid: { left:50, right:50, top:18, bottom: isMobile() ? 58 : 36 },
+        legend: { data:['累计票房','豆瓣评分人数'], orient:'horizontal', left:'center', bottom:0, textStyle:{color:'rgba(255,255,255,0.6)',fontSize:11} },
+        grid: { left:10, right:20, top:20, bottom:30, containLabel:true },
         xAxis: { type:'category', data:dates, axisLine:{lineStyle:{color:'rgba(255,255,255,0.12)'}}, axisLabel:{color:'rgba(255,255,255,0.5)',fontSize:10} },
         yAxis: [
             { type:'value', name:'万元', nameTextStyle:{color:'rgba(255,255,255,0.5)',fontSize:10},
@@ -726,8 +726,9 @@ function renderAccumChart() {
                 return s;
             }
         },
-        legend: { data: MOVIES.map(m => m.name), bottom: isMobile() ? 10 : 0, textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: isMobile() ? 9 : 10 } },
-        grid: { left:50, right:25, top:18, bottom: isMobile() ? 58 : 36 },
+        legend: { data: MOVIES.map(m => m.name), orient:'horizontal', left:'center', bottom:0, textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: 10 },
+            formatter: function(name) { return name.length > 6 ? name.slice(0,6) + '...' : name; } },
+        grid: { left:10, right:20, top:20, bottom:30, containLabel:true },
         xAxis: {
             type: 'category', data: dates.map(d => d.slice(5)),
             axisLine: { lineStyle: { color: 'rgba(255,255,255,0.12)' } },
@@ -785,8 +786,9 @@ function renderDailyCompChart() {
                 return s;
             }
         },
-        legend: { data: MOVIES.map(m => m.name), bottom: isMobile() ? 10 : 0, textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: isMobile() ? 9 : 10 } },
-        grid: { left:50, right:25, top:18, bottom: isMobile() ? 58 : 36 },
+        legend: { data: MOVIES.map(m => m.name), orient:'horizontal', left:'center', bottom:0, textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: 10 },
+            formatter: function(name) { return name.length > 6 ? name.slice(0,6) + '...' : name; } },
+        grid: { left:10, right:20, top:20, bottom:30, containLabel:true },
         xAxis: {
             type: 'category', data: dates.map(d => d.slice(5)),
             axisLine: { lineStyle: { color: 'rgba(255,255,255,0.12)' } },
