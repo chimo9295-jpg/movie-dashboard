@@ -29,7 +29,6 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           BRIGHTDATA_TOKEN: ${{ secrets.BRIGHTDATA_TOKEN }}
-          BRIGHTDATA_API_URL: ${{ secrets.BRIGHTDATA_API_URL }}
 
       - name: Run single-movie detail crawler
         run: python crawler_complete_fixed.py
@@ -37,7 +36,6 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           BRIGHTDATA_TOKEN: ${{ secrets.BRIGHTDATA_TOKEN }}
-          BRIGHTDATA_API_URL: ${{ secrets.BRIGHTDATA_API_URL }}
 
       - name: Run Douban rating fetcher
         run: python douban_rating_to_supabase.py
