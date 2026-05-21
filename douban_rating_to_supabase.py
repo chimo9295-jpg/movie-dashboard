@@ -29,14 +29,18 @@ def fetch_rating():
 
 def save_rating(score, votes):
     today = date.today().isoformat()
-    
-    # 检查今天是否已有记录
+
     existing = supabase.table('movie_realtime').select('id').eq('crawl_date', today).execute()
     if existing.data:
-        print(f"今日评分已存在，跳过更新")
+        record_id = existing.data[0]['id']
+        supabase.table('movie_realtime').update({
+            "douban_score": float(score),
+            "douban_votes": int(votes),
+            "crawl_time": datetime.now().isoformat(),
+        }).eq('id', record_id).execute()
+        print(f"✅ 更新评分: {score} 分, {votes} 人评价 (日期: {today})")
         return
-    
-    # 插入新记录（保留历史）
+
     supabase.table('movie_realtime').insert({
         "movie_name": MOVIE_NAME,
         "douban_score": float(score),
