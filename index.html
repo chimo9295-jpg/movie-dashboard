@@ -126,52 +126,55 @@
             .header .subtitle { font-size: 11px; }
 
             .dashboard {
-                grid-template-columns: 1fr;
-                gap: 16px;
-                padding: 8px 16px 24px;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                padding: 8px 12px 24px;
                 max-width: 100%;
             }
 
-            /* 所有卡片强制单列全宽 */
-            .card,
-            .stat-card,
+            .card { padding: 12px; border-radius: 12px; min-width: 0; }
+
+            /* 前4张 stat 卡片自动形成 2×2 四宫格 */
+            .stat-card { grid-column: span 1 !important; }
+
+            /* 图表面板、ChatBI、汇总表格等强制全宽（占2列） */
             .chart-panel,
             .chart-panel.span3,
             .chart-panel.full,
             .chatbi-panel,
-            .card[style*="grid-column"] {
-                grid-column: span 1 !important;
-                width: 100% !important;
-                min-width: 0;
+            .card[style*="grid-column:span 2"],
+            .card[style*="grid-column: span 2"] {
+                grid-column: span 2 !important;
             }
 
-            .card { padding: 14px; border-radius: 12px; }
-
             /* 图表高度适配 */
-            .chart-panel { min-height: 260px; }
-            .chart-panel.full { min-height: 260px; }
-            .chart-box { min-height: 220px; }
-            .chart-panel.full .chart-box { min-height: 260px; }
-            #chart-radar { height: 280px !important; }
+            .chart-panel { min-height: 300px; }
+            .chart-panel.full { min-height: 300px; }
+            .chart-box { min-height: 260px; }
+            .chart-panel.full .chart-box { min-height: 280px; }
+            #chart-radar { height: 300px !important; }
 
             /* 字体适当缩小但保持可读 */
-            .big-num { font-size: 30px; }
-            .predict-today-val { font-size: 28px; }
-            .card-title { font-size: 12px; }
-            .meta-item .val { font-size: 13px; }
+            .big-num { font-size: 26px; }
+            .predict-today-val { font-size: 24px; }
+            .card-title { font-size: 11px; }
+            .card-title .icon { width: 22px; height: 22px; font-size: 11px; border-radius: 5px; }
+            .meta-item .val { font-size: 12px; }
             .meta-item .lbl { font-size: 9px; }
+            .meta-row { gap: 8px; }
 
             /* 表格字号保底 */
-            .summary-table { font-size: 10px; }
-            .summary-table th { font-size: 9px; padding: 4px 6px; }
-            .summary-table td { font-size: 10px; padding: 4px 6px; }
-            .bar-cell .bar-inner { height: 5px; }
+            .summary-table { font-size: 9px; }
+            .summary-table th { font-size: 8px; padding: 4px 4px; }
+            .summary-table td { font-size: 9px; padding: 4px 4px; }
+            .bar-cell .bar-inner { height: 4px; }
 
             /* ChatBI 面板 */
             .chatbi-panel { min-height: 280px; }
-            .chatbi-messages { max-height: 260px; font-size: 11px; }
+            .chatbi-messages { max-height: 240px; font-size: 11px; }
             .chatbi-input input { font-size: 11px; }
-            .chatbi-input button { font-size: 11px; padding: 8px 12px; }
+            .chatbi-input button { font-size: 11px; padding: 8px 10px; }
+            .chatbi-toolbar button { font-size: 9px; padding: 3px 6px; }
 
             /* 表格横向滚动保护 */
             #summary-table-wrap { overflow-x: auto; }
@@ -530,6 +533,8 @@ function renderAll() {
     } catch(e) {}
 }
 
+function isMobile() { return window.innerWidth < 768; }
+
 function getLatestDate() {
     const ds = allData.dailyStats||[];
     if (!ds.length) return '--';
@@ -654,8 +659,8 @@ function renderDualChart() {
                 });
                 return s;
             }},
-        legend: { data:['累计票房','豆瓣评分人数'], bottom:0, textStyle:{color:'rgba(255,255,255,0.6)',fontSize:11} },
-        grid: { left:55, right:55, top:18, bottom:36 },
+        legend: { data:['累计票房','豆瓣评分人数'], bottom: isMobile() ? 8 : 0, textStyle:{color:'rgba(255,255,255,0.6)',fontSize: isMobile() ? 10 : 11} },
+        grid: { left:50, right:50, top:18, bottom: isMobile() ? 50 : 36 },
         xAxis: { type:'category', data:dates, axisLine:{lineStyle:{color:'rgba(255,255,255,0.12)'}}, axisLabel:{color:'rgba(255,255,255,0.5)',fontSize:10} },
         yAxis: [
             { type:'value', name:'万元', nameTextStyle:{color:'rgba(255,255,255,0.5)',fontSize:10},
@@ -720,8 +725,8 @@ function renderAccumChart() {
                 return s;
             }
         },
-        legend: { data: MOVIES.map(m => m.name), bottom: 0, textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: 10 } },
-        grid: { left: 55, right: 30, top: 18, bottom: 36 },
+        legend: { data: MOVIES.map(m => m.name), bottom: isMobile() ? 8 : 0, textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: isMobile() ? 9 : 10 } },
+        grid: { left:50, right:25, top:18, bottom: isMobile() ? 50 : 36 },
         xAxis: {
             type: 'category', data: dates.map(d => d.slice(5)),
             axisLine: { lineStyle: { color: 'rgba(255,255,255,0.12)' } },
@@ -779,8 +784,8 @@ function renderDailyCompChart() {
                 return s;
             }
         },
-        legend: { data: MOVIES.map(m => m.name), bottom: 0, textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: 10 } },
-        grid: { left: 55, right: 30, top: 18, bottom: 36 },
+        legend: { data: MOVIES.map(m => m.name), bottom: isMobile() ? 8 : 0, textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: isMobile() ? 9 : 10 } },
+        grid: { left:50, right:25, top:18, bottom: isMobile() ? 50 : 36 },
         xAxis: {
             type: 'category', data: dates.map(d => d.slice(5)),
             axisLine: { lineStyle: { color: 'rgba(255,255,255,0.12)' } },
@@ -844,13 +849,13 @@ function renderRadarChart() {
         },
         legend: {
             data: MOVIES.map(m => m.name),
-            bottom: 0,
-            textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: 9 },
-            itemWidth: 12, itemHeight: 8,
+            bottom: isMobile() ? 10 : 0,
+            textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: isMobile() ? 8 : 9 },
+            itemWidth: isMobile() ? 10 : 12, itemHeight: isMobile() ? 6 : 8,
         },
         radar: {
-            center: ['50%', '48%'],
-            radius: '60%',
+            center: [isMobile() ? '50%' : '50%', isMobile() ? '44%' : '48%'],
+            radius: isMobile() ? '50%' : '60%',
             indicator: indicators,
             axisName: { color: 'rgba(255,255,255,0.5)', fontSize: 9 },
             splitLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
@@ -1027,7 +1032,14 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(loadAllData, 300000);
 });
 window.addEventListener('resize', () => {
-    Object.values(charts).forEach(c => { try { c.resize(); } catch(e){} });
+    const wasMobile = window._wasMobile;
+    const nowMobile = isMobile();
+    window._wasMobile = nowMobile;
+    if (wasMobile !== nowMobile) {
+        renderAll();
+    } else {
+        Object.values(charts).forEach(c => { try { c.resize(); } catch(e){} });
+    }
 });
 </script>
 </body>
