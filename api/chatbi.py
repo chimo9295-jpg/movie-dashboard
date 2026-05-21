@@ -1,22 +1,22 @@
-"""Vercel Serverless Function — DeepSeek ChatBI 透明代理
-
-接收前端的 messages 数组（含 system prompt + data context + 对话历史 + 用户问题），
-注入服务端环境变量 DEEPSEEK_API_KEY 后直接转发到 DeepSeek API，
-将原始响应透传回前端。
-"""
+"""Vercel Serverless Function — DeepSeek ChatBI 透明代理"""
 import os
 import json
 
 import requests
+from flask import Flask, request, jsonify
 
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
 
-CORS_HEADERS = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-}
+app = Flask(__name__)
+
+
+@app.after_request
+def add_cors(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
 
 
 def forward_to_deepseek(messages):
@@ -52,41 +52,23 @@ def forward_to_deepseek(messages):
         return {"error": f"DeepSeek API error: {str(e)}"}, 502
 
 
-def json_response(body, status=200):
-    return {
-        "statusCode": status,
-        "headers": {**CORS_HEADERS, "Content-Type": "application/json"},
-        "body": json.dumps(body, ensure_ascii=False),
-    }
+@app.route("/api/chatbi", methods=["GET"])
+def health():
+    return jsonify({
+        "status": "ok",
+        "deepseek_key_configured": bool(DEEPSEEK_API_KEY),
+    })
 
 
-def handler(event, context):
-    method = event.get("httpMethod", "GET")
+@app.route("/api/chatbi", methods=["POST", "OPTIONS"])
+def chatbi():
+    if request.method == "OPTIONS":
+        return "", 204
 
-    if method == "OPTIONS":
-        return {
-            "statusCode": 204,
-            "headers": CORS_HEADERS,
-            "body": "",
-        }
-
-    if method == "GET":
-        return json_response({
-            "status": "ok",
-            "deepseek_key_configured": bool(DEEPSEEK_API_KEY),
-        })
-
-    if method != "POST":
-        return json_response({"error": "Method not allowed"}, 405)
-
-    try:
-        body = json.loads(event.get("body", "{}"))
-    except json.JSONDecodeError:
-        return json_response({"error": "Invalid JSON body"}, 400)
-
+    body = request.get_json(silent=True) or {}
     messages = body.get("messages")
     if not messages or not isinstance(messages, list):
-        return json_response({"error": "messages array required"}, 400)
+        return jsonify({"error": "messages array required"}), 400
 
     result, status = forward_to_deepseek(messages)
-    return json_response(result, status)
+    return jsonify(result), status
