@@ -142,17 +142,18 @@
             .chart-panel.span3,
             .chart-panel.full,
             .chatbi-panel,
+            #predict-card-wrap,
             .card[style*="grid-column:span 2"],
             .card[style*="grid-column: span 2"] {
                 grid-column: span 2 !important;
             }
 
             /* 图表高度适配 */
-            .chart-panel { min-height: 300px; }
-            .chart-panel.full { min-height: 300px; }
-            .chart-box { min-height: 260px; }
-            .chart-panel.full .chart-box { min-height: 280px; }
-            #chart-radar { height: 300px !important; }
+            .chart-panel { min-height: 350px; }
+            .chart-panel.full { min-height: 350px; }
+            .chart-box { min-height: 300px; }
+            .chart-panel.full .chart-box { min-height: 310px; }
+            #chart-radar { height: 320px !important; }
 
             /* 字体适当缩小但保持可读 */
             .big-num { font-size: 26px; }
@@ -659,8 +660,8 @@ function renderDualChart() {
                 });
                 return s;
             }},
-        legend: { data:['累计票房','豆瓣评分人数'], bottom: isMobile() ? 8 : 0, textStyle:{color:'rgba(255,255,255,0.6)',fontSize: isMobile() ? 10 : 11} },
-        grid: { left:50, right:50, top:18, bottom: isMobile() ? 50 : 36 },
+        legend: { data:['累计票房','豆瓣评分人数'], bottom: isMobile() ? 10 : 0, textStyle:{color:'rgba(255,255,255,0.6)',fontSize: isMobile() ? 10 : 11} },
+        grid: { left:50, right:50, top:18, bottom: isMobile() ? 58 : 36 },
         xAxis: { type:'category', data:dates, axisLine:{lineStyle:{color:'rgba(255,255,255,0.12)'}}, axisLabel:{color:'rgba(255,255,255,0.5)',fontSize:10} },
         yAxis: [
             { type:'value', name:'万元', nameTextStyle:{color:'rgba(255,255,255,0.5)',fontSize:10},
@@ -725,8 +726,8 @@ function renderAccumChart() {
                 return s;
             }
         },
-        legend: { data: MOVIES.map(m => m.name), bottom: isMobile() ? 8 : 0, textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: isMobile() ? 9 : 10 } },
-        grid: { left:50, right:25, top:18, bottom: isMobile() ? 50 : 36 },
+        legend: { data: MOVIES.map(m => m.name), bottom: isMobile() ? 10 : 0, textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: isMobile() ? 9 : 10 } },
+        grid: { left:50, right:25, top:18, bottom: isMobile() ? 58 : 36 },
         xAxis: {
             type: 'category', data: dates.map(d => d.slice(5)),
             axisLine: { lineStyle: { color: 'rgba(255,255,255,0.12)' } },
@@ -784,8 +785,8 @@ function renderDailyCompChart() {
                 return s;
             }
         },
-        legend: { data: MOVIES.map(m => m.name), bottom: isMobile() ? 8 : 0, textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: isMobile() ? 9 : 10 } },
-        grid: { left:50, right:25, top:18, bottom: isMobile() ? 50 : 36 },
+        legend: { data: MOVIES.map(m => m.name), bottom: isMobile() ? 10 : 0, textStyle: { color: 'rgba(255,255,255,0.6)', fontSize: isMobile() ? 9 : 10 } },
+        grid: { left:50, right:25, top:18, bottom: isMobile() ? 58 : 36 },
         xAxis: {
             type: 'category', data: dates.map(d => d.slice(5)),
             axisLine: { lineStyle: { color: 'rgba(255,255,255,0.12)' } },
