@@ -1,7 +1,4 @@
 {
-  "name": "movie-dashboard",
-  "framework": null,
-  "outputDirectory": ".",
   "functions": {
     "api/chatbi.py": {
       "runtime": "@vercel/python",

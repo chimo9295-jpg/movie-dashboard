@@ -194,6 +194,7 @@
 
 <script>
 // ==================== Supabase ====================
+const CHATBI_API = 'https://YOUR_PROJECT.vercel.app/api/chatbi'; // TODO: 改为你的 Vercel 部署域名
 const SB = {
     url: 'https://ebmncqnzammtplpwlveb.supabase.co/rest/v1',
     key: 'sb_publishable_36nGYLplp0DYcGbTx6GWpA_K11Jb9Gd'
@@ -424,7 +425,7 @@ function renderPredictCard() {
                 '<span style="opacity:0.4;width:44px;">' + (a.date||'').slice(5) + '</span>' +
                 '<span style="display:inline-block;width:' + barW + 'px;height:4px;border-radius:2px;background:' + barColor + ';"></span>' +
                 '<span style="opacity:0.6;">' + (a.ape*100).toFixed(0) + '%</span>' +
-                '<span style="opacity:0.3;">预测' + fmtNum(a.pred) + ' vs 实际' + fmtNum(a.actual) + '万</span>' +
+                '<span style="opacity:0.3;">预测' + formatBoxOffice(a.pred) + ' vs 实际' + formatBoxOffice(a.actual) + '</span>' +
             '</div>';
         });
         mapeHtml += '</div>';
@@ -432,7 +433,7 @@ function renderPredictCard() {
 
     el.innerHTML =
         '<div>' +
-            '<span class="predict-today-val" style="background:linear-gradient(135deg,#FF9F43,#FF6B6B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">' + fmtNum(latestBox) + '</span><span class="predict-today-unit">万</span>' +
+            '<span class="predict-today-val" style="background:linear-gradient(135deg,#FF9F43,#FF6B6B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">' + formatBoxOffice(latestBox) + '</span><span class="predict-today-unit"></span>' +
             '<span style="display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;margin-left:6px;background:rgba(255,255,255,0.08);">' + TYPE_LABEL[latestType] + '</span>' +
         '</div>' +
         '<div style="font-size:10px;opacity:0.45;margin-bottom:10px;">' + (latest.stat_date || '--') + ' · ' + vsAvgStr + '</div>' +
@@ -442,7 +443,7 @@ function renderPredictCard() {
         '</div>' +
         '<div class="predict-row">' +
             '<span class="predict-label">明日预测 <span style="font-size:9px;opacity:0.5;">(' + TYPE_LABEL[tomorrowType] + ')</span></span>' +
-            '<span class="predict-value gradient-cyan">' + fmtNum(tomorrowPred) + '</span><span style="font-size:10px;opacity:0.5;"> 万</span>' +
+            '<span class="predict-value gradient-cyan">' + formatBoxOffice(tomorrowPred) + '</span><span style="font-size:10px;opacity:0.5;"></span>' +
         '</div>' +
         calendarNote +
         '<div class="predict-row">' +
@@ -530,7 +531,7 @@ function renderAmahCard() {
         </div>
         <div style="font-size:11px;opacity:0.6;margin-top:4px;">累计票房</div>
         <div class="meta-row">
-            <div class="meta-item"><div class="val">${fmtNum(last.daily_box)}万</div><div class="lbl">最新日票房</div></div>
+            <div class="meta-item"><div class="val">${formatBoxOffice(last.daily_box)}</div><div class="lbl">最新日票房</div></div>
             <div class="meta-item"><div class="val">${dd.avg_seat_view||'--'}</div><div class="lbl">上座率</div></div>
         </div>`;
 }
@@ -558,7 +559,7 @@ function renderTodayCard() {
 
     el.innerHTML = `
         <div style="font-size:11px;opacity:0.5;margin-bottom:2px;">最新日大盘票房</div>
-        <div style="font-size:30px;font-weight:800;">${fmtNum(todayDaily)}<span style="font-size:12px;opacity:0.5;"> 万</span></div>
+        <div style="font-size:30px;font-weight:800;">${formatBoxOffice(todayDaily)}</div>
         <div style="margin-top:14px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);font-size:11px;">
             <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="opacity:0.5;">票房冠军</span><span style="color:#FFD700;">${topMovie.name}</span></div>
             <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="opacity:0.5;">票房占比</span><span>${dash[topMovie.id]?.box_rate||'--'}</span></div>
@@ -599,7 +600,7 @@ function renderDualChart() {
         xAxis: { type:'category', data:dates, axisLine:{lineStyle:{color:'rgba(255,255,255,0.12)'}}, axisLabel:{color:'rgba(255,255,255,0.5)',fontSize:10} },
         yAxis: [
             { type:'value', name:'万元', nameTextStyle:{color:'rgba(255,255,255,0.5)',fontSize:10},
-              splitLine:{lineStyle:{color:'rgba(255,255,255,0.05)'}}, axisLabel:{color:'rgba(255,255,255,0.5)',fontSize:10, formatter:v=>v>=10000?(v/10000).toFixed(1)+'亿':v} },
+              splitLine:{lineStyle:{color:'rgba(255,255,255,0.05)'}}, axisLabel:{color:'rgba(255,255,255,0.5)',fontSize:10, formatter:formatBoxOffice} },
             { type:'value', name:'人数', nameTextStyle:{color:'rgba(255,255,255,0.5)',fontSize:10},
               splitLine:{show:false}, axisLabel:{color:'rgba(255,255,255,0.5)',fontSize:10, formatter:v=>(v/10000).toFixed(1)+'万'} }
         ],
@@ -714,7 +715,7 @@ function renderDailyCompChart() {
                 let s = '<b>' + params[0].name + '</b><br/>';
                 params.sort((a,b) => (b.value||0) - (a.value||0));
                 params.forEach(p => {
-                    if (p.value != null) s += p.marker + ' ' + p.seriesName + ': ' + fmtNum(p.value) + ' 万<br/>';
+                    if (p.value != null) s += p.marker + ' ' + p.seriesName + ': ' + formatBoxOffice(p.value) + '<br/>';
                 });
                 return s;
             }
@@ -729,7 +730,7 @@ function renderDailyCompChart() {
         yAxis: {
             type: 'value', name: '万元', nameTextStyle: { color: 'rgba(255,255,255,0.5)', fontSize: 10 },
             splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-            axisLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 10 }
+            axisLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 10, formatter: formatBoxOffice }
         },
         series
     });
@@ -826,7 +827,7 @@ function renderSummaryTable() {
 
         h += '<tr>';
         h += `<td style="font-weight:700;color:${m.color}">${m.name}</td>`;
-        h += `<td class="bar-cell"><span class="bar-inner" style="width:${dailyBar*0.8}px;background:${m.color};"></span>${fmtNum(lastRec.daily_box)}</td>`;
+        h += `<td class="bar-cell"><span class="bar-inner" style="width:${dailyBar*0.8}px;background:${m.color};"></span>${formatBoxOffice(lastRec.daily_box)}</td>`;
         h += `<td>${((lastRec.total_box||0)/10000).toFixed(2)}</td>`;
         h += `<td>${dd.avg_seat_view||'--'}</td>`;
         h += `<td>${dd.show_count_rate||'--'}</td>`;
@@ -861,7 +862,7 @@ function buildDataContext() {
         const records = d[m.id] || [];
         const last = records[records.length - 1] || {};
         const dd = dash[m.id] || {};
-        ctx += `| ${m.name} | ${((last.total_box||0)/10000).toFixed(2)} | ${fmtNum(last.daily_box)} | ${dd.avg_seat_view||'--'} | ${dd.show_count_rate||'--'} | ${dd.box_rate||'--'} | ${records.length}天 |\n`;
+        ctx += `| ${m.name} | ${((last.total_box||0)/10000).toFixed(2)} | ${formatBoxOffice(last.daily_box)} | ${dd.avg_seat_view||'--'} | ${dd.show_count_rate||'--'} | ${dd.box_rate||'--'} | ${records.length}天 |\n`;
     });
 
     const dates = [...new Set(MOVIES.flatMap(m => (d[m.id]||[]).map(r => r.stat_date)))].sort();
@@ -907,7 +908,7 @@ async function chatbiSend() {
         messages.push(...chatHistory.slice(-30));
         messages.push({ role: 'user', content: q });
 
-        const response = await fetch('/api/chatbi', {
+        const response = await fetch(CHATBI_API, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ messages: messages }),
@@ -946,6 +947,11 @@ function fmtNum(n) {
     if (n==null||isNaN(n)) return '--';
     if (Math.abs(n)>=10000) return (n/10000).toFixed(2);
     return Number(n).toLocaleString('zh-CN',{maximumFractionDigits:1});
+}
+function formatBoxOffice(value) {
+    if (value == null || isNaN(value)) return '--';
+    if (Math.abs(value) >= 10000) return (value / 10000).toFixed(2) + '亿';
+    return Number(value).toFixed(0) + '万';
 }
 function getNextDate(dateStr) {
     var d = new Date(dateStr + 'T00:00:00');
