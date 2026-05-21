@@ -118,6 +118,65 @@
         .predict-lifecycle.growth { color: #64DCB4; background: rgba(100,220,180,0.12); }
         .predict-lifecycle.decline { color: #a0aec0; background: rgba(160,174,192,0.12); }
         .predict-model-note { margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 10px; opacity: 0.4; line-height: 1.5; }
+
+        /* ========== 手机自适应 (< 768px) ========== */
+        @media (max-width: 767px) {
+            .header { padding: 18px 16px 8px; }
+            .header h1 { font-size: 20px; letter-spacing: 2px; }
+            .header .subtitle { font-size: 11px; }
+
+            .dashboard {
+                grid-template-columns: 1fr;
+                gap: 16px;
+                padding: 8px 16px 24px;
+                max-width: 100%;
+            }
+
+            /* 所有卡片强制单列全宽 */
+            .card,
+            .stat-card,
+            .chart-panel,
+            .chart-panel.span3,
+            .chart-panel.full,
+            .chatbi-panel,
+            .card[style*="grid-column"] {
+                grid-column: span 1 !important;
+                width: 100% !important;
+                min-width: 0;
+            }
+
+            .card { padding: 14px; border-radius: 12px; }
+
+            /* 图表高度适配 */
+            .chart-panel { min-height: 260px; }
+            .chart-panel.full { min-height: 260px; }
+            .chart-box { min-height: 220px; }
+            .chart-panel.full .chart-box { min-height: 260px; }
+            #chart-radar { height: 280px !important; }
+
+            /* 字体适当缩小但保持可读 */
+            .big-num { font-size: 30px; }
+            .predict-today-val { font-size: 28px; }
+            .card-title { font-size: 12px; }
+            .meta-item .val { font-size: 13px; }
+            .meta-item .lbl { font-size: 9px; }
+
+            /* 表格字号保底 */
+            .summary-table { font-size: 10px; }
+            .summary-table th { font-size: 9px; padding: 4px 6px; }
+            .summary-table td { font-size: 10px; padding: 4px 6px; }
+            .bar-cell .bar-inner { height: 5px; }
+
+            /* ChatBI 面板 */
+            .chatbi-panel { min-height: 280px; }
+            .chatbi-messages { max-height: 260px; font-size: 11px; }
+            .chatbi-input input { font-size: 11px; }
+            .chatbi-input button { font-size: 11px; padding: 8px 12px; }
+
+            /* 表格横向滚动保护 */
+            #summary-table-wrap { overflow-x: auto; }
+            .result-table { font-size: 9px; }
+        }
     </style>
 </head>
 <body>
