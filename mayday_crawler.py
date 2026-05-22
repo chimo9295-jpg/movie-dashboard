@@ -256,13 +256,23 @@ def fetch_dashboard_data() -> Optional[Dict]:
                 v = movie_data[k]
                 logger.info(f"  [DEBUG] movieList.data['{k}']: {json.dumps(v, ensure_ascii=False)[:300]}")
 
-        # 路径1: movieList.data 层级
-        total_box_info = movie_data.get('totalBoxInfo') or movie_data.get('totalBox') or {}
-        if isinstance(total_box_info, dict):
-            market_total_desc = total_box_info.get('boxDesc', '') or total_box_info.get('desc', '')
-            market_total_value = parse_box_desc(market_total_desc)
+        # 路径1: nationBoxInfo (猫眼 dashboard-ajax 实际字段)
+        nation_info = movie_data.get('nationBoxInfo', {})
+        if isinstance(nation_info, dict):
+            total_unit = nation_info.get('nationBoxSplitUnit', {})
+            if isinstance(total_unit, dict) and total_unit.get('num'):
+                num = total_unit.get('num', '0')
+                unit = total_unit.get('unit', '万')
+                market_total_desc = f"{num}{unit}"
+                market_total_value = parse_box_desc(market_total_desc)
+        # 路径2: movieList.data 层级 (兼容旧字段名)
         if not market_total_desc:
-            # 路径2: 顶层
+            total_box_info = movie_data.get('totalBoxInfo') or movie_data.get('totalBox') or {}
+            if isinstance(total_box_info, dict):
+                market_total_desc = total_box_info.get('boxDesc', '') or total_box_info.get('desc', '')
+                market_total_value = parse_box_desc(market_total_desc)
+        # 路径3: 顶层
+        if not market_total_desc:
             top_total = data.get('totalBoxInfo') or data.get('totalBox') or {}
             if isinstance(top_total, dict):
                 market_total_desc = top_total.get('boxDesc', '') or top_total.get('desc', '')

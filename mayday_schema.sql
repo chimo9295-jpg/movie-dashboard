@@ -41,8 +41,15 @@ CREATE TABLE IF NOT EXISTS mayday_dashboard (
     show_count      BIGINT,                    -- 排片场次
     show_count_rate TEXT,                      -- 排片占比
     split_box_rate  TEXT,                      -- 分账票房占比
-    sum_box_desc    TEXT,                      -- 累计票房描述（解码后）
-    crawl_time      TIMESTAMPTZ DEFAULT NOW(),
+    sum_box_desc         TEXT,                      -- 累计票房描述（解码后）
+    sum_split_box_desc   TEXT,                      -- 分账累计票房描述
+    total_box_value      DOUBLE PRECISION,          -- 综合累计票房（万元）
+    split_box_value      DOUBLE PRECISION,          -- 分账累计票房（万元）
+    service_fee_rate     DOUBLE PRECISION,          -- 服务费比例
+    pre_sale_box         DOUBLE PRECISION,          -- 预售票房（万元）
+    market_total_desc    TEXT,                      -- 大盘票房描述
+    market_total_value   DOUBLE PRECISION,          -- 大盘票房（万元）
+    crawl_time           TIMESTAMPTZ DEFAULT NOW(),
 
     UNIQUE(movie_id, crawl_date)
 );
