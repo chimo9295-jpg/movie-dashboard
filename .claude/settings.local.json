@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(vercel --version)",
+      "Bash(wrangler *)",
+      "Bash(sed -i 's|<div style=\"position:relative;display:inline-block;\">|<div>|' index.html)",
+      "Bash(sed -i 's|<div class=\"big-num gradient-cyan\">|<span class=\"big-num gradient-cyan\">|' index.html)",
+      "Bash(sed -i 's|</div>\\\\n\\\\t            <span style=\"position:absolute;right:0;bottom:4px;font-size:12px;opacity:0.5;\">亿</span>||' index.html)",
+      "Bash(git -C \"D:\\\\pyproject\\\\movie_dashboard\" add index.html)",
+      "Bash(git -C 'D:\\\\pyproject\\\\movie_dashboard' commit -m 'fix: show actual Supabase crawl_time instead of browser time in footer')"
+    ]
+  }
+}
