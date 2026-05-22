@@ -245,6 +245,17 @@ def fetch_dashboard_data() -> Optional[Dict]:
         movie_data = data.get('movieList', {}).get('data', {})
         market_total_desc = ''
         market_total_value = 0.0
+
+        # DEBUG: 打印结构以定位大盘字段
+        logger.info(f"  [DEBUG] 顶层keys: {list(data.keys())}")
+        logger.info(f"  [DEBUG] movieList.data keys: {list(movie_data.keys())}")
+        if 'totalBoxInfo' in data:
+            logger.info(f"  [DEBUG] 顶层 totalBoxInfo: {json.dumps(data['totalBoxInfo'], ensure_ascii=False)[:500]}")
+        for k in movie_data:
+            if 'total' in k.lower() or 'box' in k.lower():
+                v = movie_data[k]
+                logger.info(f"  [DEBUG] movieList.data['{k}']: {json.dumps(v, ensure_ascii=False)[:300]}")
+
         # 路径1: movieList.data 层级
         total_box_info = movie_data.get('totalBoxInfo') or movie_data.get('totalBox') or {}
         if isinstance(total_box_info, dict):
