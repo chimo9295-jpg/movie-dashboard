@@ -241,11 +241,31 @@ def fetch_dashboard_data() -> Optional[Dict]:
         woff_match = re.search(r'url\("([^"]+\.woff)"\)', font_style)
         woff_url = woff_match.group(1) if woff_match else None
 
+        # 大盘数据：尝试多个可能路径
+        movie_data = data.get('movieList', {}).get('data', {})
+        market_total_desc = ''
+        market_total_value = 0.0
+        # 路径1: movieList.data 层级
+        total_box_info = movie_data.get('totalBoxInfo') or movie_data.get('totalBox') or {}
+        if isinstance(total_box_info, dict):
+            market_total_desc = total_box_info.get('boxDesc', '') or total_box_info.get('desc', '')
+            market_total_value = parse_box_desc(market_total_desc)
+        if not market_total_desc:
+            # 路径2: 顶层
+            top_total = data.get('totalBoxInfo') or data.get('totalBox') or {}
+            if isinstance(top_total, dict):
+                market_total_desc = top_total.get('boxDesc', '') or top_total.get('desc', '')
+                market_total_value = parse_box_desc(market_total_desc)
+        if market_total_desc:
+            logger.info(f"  大盘票房: {market_total_desc} ({market_total_value}w)")
+
         return {
-            'movieList': data.get('movieList', {}).get('data', {}).get('list', []),
+            'movieList': movie_data.get('list', []),
             'movieInfo': data.get('movieInfo', {}).get('data', {}),
             'woff_url': woff_url,
             'font_style': font_style,
+            'market_total_desc': market_total_desc,
+            'market_total_value': market_total_value,
         }
     except Exception as e:
         logger.error(f"  解析 dashboard 数据失败: {e}")
@@ -399,7 +419,8 @@ class MaydayStorage:
             time.sleep(0.15)
         return success
 
-    def insert_dashboard_snapshot(self, movie_id: int, data: Dict) -> bool:
+    def insert_dashboard_snapshot(self, movie_id: int, data: Dict, market_total_desc: str = '',
+                                   market_total_value: float = 0.0) -> bool:
         """写入仪表盘快照（上座率、排片占比、综合票房等）"""
         try:
             record = {
@@ -417,6 +438,8 @@ class MaydayStorage:
                 'split_box_value': data.get('split_box_value'),       # 分账累计票房(万元)
                 'service_fee_rate': data.get('service_fee_rate'),     # 服务费比例
                 'pre_sale_box': data.get('pre_sale_box'),             # 预售票房(万元)
+                'market_total_desc': market_total_desc,            # 大盘票房描述
+                'market_total_value': market_total_value,          # 大盘票房(万元)
                 'crawl_time': datetime.now(timezone.utc).isoformat(),
             }
             # 每天每部电影只保留一条快照
@@ -549,7 +572,9 @@ def main():
                 'service_fee_rate': service_fee_rate,
                 'pre_sale_box': pre_sale_box,
             }
-            storage.insert_dashboard_snapshot(movie_id, dashboard_record)
+            storage.insert_dashboard_snapshot(movie_id, dashboard_record,
+                market_total_desc=dashboard.get('market_total_desc', ''),
+                market_total_value=dashboard.get('market_total_value', 0.0))
             total_dashboard_records += 1
 
             logger.info(f"  Seat: {dm.get('avgSeatView', 'N/A')}")
