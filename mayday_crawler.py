@@ -48,7 +48,7 @@ import base64
 import random
 import logging
 import re
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 from typing import List, Dict, Optional, Tuple
 from io import BytesIO
 
@@ -350,7 +350,7 @@ class MaydayStorage:
                 'movie_id': movie_id,
                 'movie_name': movie_name,
                 'release_date': release_date,
-                'updated_at': datetime.now().isoformat(),
+                'updated_at': datetime.now(timezone.utc).isoformat(),
             }
             existing = self.client.table('mayday_movies') \
                 .select('id').eq('movie_id', movie_id).execute()
@@ -379,7 +379,7 @@ class MaydayStorage:
                     'daily_split_box': rec.get('daily_split_box'),
                     'total_box': rec['total_box'],
                     'total_split_box': rec.get('total_split_box'),
-                    'crawl_time': datetime.now().isoformat(),
+                    'crawl_time': datetime.now(timezone.utc).isoformat(),
                 }
                 existing = self.client.table('mayday_daily_stats') \
                     .select('id') \
@@ -417,7 +417,7 @@ class MaydayStorage:
                 'split_box_value': data.get('split_box_value'),       # 分账累计票房(万元)
                 'service_fee_rate': data.get('service_fee_rate'),     # 服务费比例
                 'pre_sale_box': data.get('pre_sale_box'),             # 预售票房(万元)
-                'crawl_time': datetime.now().isoformat(),
+                'crawl_time': datetime.now(timezone.utc).isoformat(),
             }
             # 每天每部电影只保留一条快照
             existing = self.client.table('mayday_dashboard') \

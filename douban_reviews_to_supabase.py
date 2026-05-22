@@ -4,7 +4,7 @@ import time
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from supabase import create_client, Client
 
 sys.stdout.reconfigure(encoding='utf-8')
@@ -88,7 +88,7 @@ def check_daily_limit() -> dict:
 def record_api_call(cache: dict):
     """记录一次 API 调用"""
     cache['call_count'] += 1
-    cache['last_call_time'] = datetime.now().isoformat()
+    cache['last_call_time'] = datetime.now(timezone.utc).isoformat()
     save_call_cache(cache)
     
     remaining = DAILY_CALL_LIMIT - cache['call_count']

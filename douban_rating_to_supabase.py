@@ -1,6 +1,8 @@
 import os
 import requests
-from datetime import datetime, date
+from datetime import datetime, date, timezone, timedelta
+
+CST = timezone(timedelta(hours=8))
 import sys
 sys.stdout.reconfigure(encoding="utf-8")
 from supabase import create_client, Client
@@ -28,7 +30,7 @@ def fetch_rating():
     return rating, rating_count
 
 def save_rating(score, votes):
-    today = date.today().isoformat()
+    today = datetime.now(CST).date().isoformat()
 
     existing = supabase.table('movie_realtime').select('id').eq('crawl_date', today).execute()
     if existing.data:
@@ -36,7 +38,7 @@ def save_rating(score, votes):
         supabase.table('movie_realtime').update({
             "douban_score": float(score),
             "douban_votes": int(votes),
-            "crawl_time": datetime.now().isoformat(),
+            "crawl_time": datetime.now(timezone.utc).isoformat(),
         }).eq('id', record_id).execute()
         print(f"✅ 更新评分: {score} 分, {votes} 人评价 (日期: {today})")
         return
@@ -45,7 +47,7 @@ def save_rating(score, votes):
         "movie_name": MOVIE_NAME,
         "douban_score": float(score),
         "douban_votes": int(votes),
-        "crawl_time": datetime.now().isoformat(),
+        "crawl_time": datetime.now(timezone.utc).isoformat(),
         "crawl_date": today
     }).execute()
     print(f"✅ 插入评分: {score} 分, {votes} 人评价 (日期: {today})")

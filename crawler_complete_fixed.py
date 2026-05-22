@@ -11,7 +11,7 @@ import sys
 import json
 import time
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import requests
 from typing import List, Dict, Optional
@@ -225,7 +225,7 @@ class DataStorage:
                 'stat_date': stat_date,
                 'daily_box': data['daily_box'],
                 'total_box': data['total_box'],
-                'crawl_time': datetime.now().isoformat(),
+                'crawl_time': datetime.now(timezone.utc).isoformat(),
             }
 
             existing = self.client.table('mayday_daily_stats') \
