@@ -527,8 +527,10 @@ function renderAll() {
     });
     try {
         const latest = getLatestDate();
+        const crawlTime = getLatestCrawlTime();
+        const crawlStr = crawlTime ? new Date(crawlTime).toLocaleString('zh-CN', {timeZone:'Asia/Shanghai', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit'}) : '--';
         document.getElementById('updateTime').textContent =
-            '数据更新: ' + new Date().toLocaleString('zh-CN') +
+            '数据更新: ' + crawlStr +
             ' | 最新数据日期: ' + latest +
             ' | 影片: ' + (allData.movies||[]).length + '部';
     } catch(e) {}
@@ -540,6 +542,12 @@ function getLatestDate() {
     const ds = allData.dailyStats||[];
     if (!ds.length) return '--';
     return ds.reduce((max, d) => d.stat_date > max ? d.stat_date : max, '');
+}
+
+function getLatestCrawlTime() {
+    const ds = allData.dailyStats||[];
+    if (!ds.length) return null;
+    return ds.reduce((max, d) => (d.crawl_time||'') > max ? d.crawl_time : max, '');
 }
 
 // ==================== Douban 评分卡片 ====================
