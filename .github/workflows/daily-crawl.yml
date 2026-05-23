@@ -1,9 +1,6 @@
 name: Daily Movie Data Crawl
 
 on:
-  schedule:
-    # 23:50 Beijing time (UTC+8) = 15:50 UTC
-    - cron: '50 15 * * *'
   workflow_dispatch:
 
 jobs:
