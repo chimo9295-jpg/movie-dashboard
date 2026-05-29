@@ -1,6 +1,11 @@
 name: Daily Movie Data Crawl
 
 on:
+  schedule:
+    # Beijing time: 12:00, 18:00, 23:50
+    - cron: '0 4 * * *'
+    - cron: '0 10 * * *'
+    - cron: '50 15 * * *'
   workflow_dispatch:
 
 jobs:
