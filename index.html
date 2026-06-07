@@ -487,12 +487,12 @@ function renderPredictCard() {
     if (filteredApes.length >= 2) {
         var totalApe = filteredApes.reduce(function(s, a) { return s + a.ape; }, 0);
         var mapeVal = totalApe / filteredApes.length;
-        var accuracyColor = mapeVal < 0.1 ? '#64DCB4' : (mapeVal < 0.25 ? '#FFD700' : '#FF6B6B');
+        var mapeColor = mapeVal < 0.1 ? '#64DCB4' : (mapeVal < 0.25 ? '#FFD700' : '#FF6B6B');
         mapeHtml = '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">' +
-            '<div style="font-size:10px;opacity:0.5;margin-bottom:6px;">近' + filteredApes.length + '天预测回测 MAPE</div>' +
+            '<div style="font-size:10px;opacity:0.5;margin-bottom:6px;">平均预测误差（MAPE）</div>' +
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
-                '<span style="font-size:11px;">预测准确度</span>' +
-                '<span style="font-size:16px;font-weight:700;color:' + accuracyColor + ';">' + ((1-mapeVal)*100).toFixed(1) + '%</span>' +
+                '<span style="font-size:11px;">近' + filteredApes.length + '天回测样本</span>' +
+                '<span style="font-size:16px;font-weight:700;color:' + mapeColor + ';">' + (mapeVal*100).toFixed(2) + '%</span>' +
             '</div>';
         filteredApes.forEach(function(a) {
             var barW = Math.min(100, Math.max(5, a.ape * 400));
