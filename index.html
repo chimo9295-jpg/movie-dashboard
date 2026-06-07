@@ -197,7 +197,7 @@
         <div id="score-card"><div class="loading-inline"></div></div>
     </div>
     <div class="card stat-card">
-        <div class="card-title"><span class="icon" style="background:rgba(255,107,107,0.18);color:#FF6B6B;">¥</span>档期总票房</div>
+        <div class="card-title"><span class="icon" style="background:rgba(255,107,107,0.18);color:#FF6B6B;">¥</span>四部影片累计票房</div>
         <div id="total-card"><div class="loading-inline"></div></div>
     </div>
     <div class="card stat-card">
@@ -590,7 +590,7 @@ function renderScoreCard() {
         </div>`;
 }
 
-// ==================== 档期总票房 ====================
+// ==================== 四部影片累计票房 ====================
 function renderTotalCard() {
     const el = document.getElementById('total-card');
     const d = allData.dailyByMovie||{};
@@ -607,7 +607,7 @@ function renderTotalCard() {
             <span class="big-num gradient-cyan">${(latestTotal/10000).toFixed(2)}</span>
             <span style="font-size:13px;opacity:0.5;margin-left:3px;">亿</span>
         </div>
-        <div style="font-size:11px;opacity:0.6;margin-top:4px;">四部电影综合累计</div>
+        <div style="font-size:11px;opacity:0.6;margin-top:4px;">四部影片累计票房</div>
         <div class="meta-row">
             <div class="meta-item"><div class="val">${allData.movies?.length||0}部</div><div class="lbl">在映</div></div>
             <div class="meta-item"><div class="val">${(allData.dailyStats?.length||0)}条</div><div class="lbl">记录</div></div>
@@ -707,7 +707,7 @@ function renderDualChart() {
         grid: { left:10, right:20, top:20, bottom:30, containLabel:true },
         xAxis: { type:'category', data:dates, axisLine:{lineStyle:{color:'rgba(255,255,255,0.12)'}}, axisLabel:{color:'rgba(255,255,255,0.5)',fontSize:10} },
         yAxis: [
-            { type:'value', name:'万元', nameTextStyle:{color:'rgba(255,255,255,0.5)',fontSize:10},
+            { type:'value', name:'', nameTextStyle:{color:'rgba(255,255,255,0.5)',fontSize:10},
               splitLine:{lineStyle:{color:'rgba(255,255,255,0.05)'}}, axisLabel:{color:'rgba(255,255,255,0.5)',fontSize:10, formatter:formatBoxOffice} },
             { type:'value', name:'人数', nameTextStyle:{color:'rgba(255,255,255,0.5)',fontSize:10},
               splitLine:{show:false}, axisLabel:{color:'rgba(255,255,255,0.5)',fontSize:10, formatter:v=>(v/10000).toFixed(1)+'万'} }
@@ -919,7 +919,7 @@ function renderSummaryTable() {
     const d = allData.dailyByMovie||{};
 
     let h = '<table class="summary-table"><thead><tr>';
-    h += '<th>电影</th><th>最新日票房(万)</th><th>综合累计(亿)</th><th>上座率</th><th>排片占比</th><th>票房占比</th><th>上映天数</th>';
+    h += '<th>电影</th><th>最新日票房</th><th>综合累计(亿)</th><th>上座率</th><th>排片占比</th><th>票房占比</th><th>上映天数</th>';
     h += '</tr></thead><tbody>';
 
     const maxDaily = Math.max(...MOVIES.map(m => {
