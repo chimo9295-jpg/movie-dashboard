@@ -642,11 +642,15 @@ function renderTodayCard() {
     const dash = allData.dashByMovie||{};
 
     let todayDaily = 0;
+    let moviesWithData = 0;
     const latest = getLatestDate();
     MOVIES.forEach(m => {
         const records = d[m.id]||[];
         const today = records.find(r => r.stat_date === latest);
-        if (today) todayDaily += today.daily_box||0;
+        if (today) {
+            todayDaily += today.daily_box||0;
+            moviesWithData++;
+        }
     });
 
     // 真实大盘数据
@@ -667,7 +671,7 @@ function renderTodayCard() {
     el.innerHTML = `
         <div style="font-size:11px;opacity:0.5;margin-bottom:2px;">猫眼大盘票房</div>
         <div style="font-size:30px;font-weight:800;background:linear-gradient(135deg,#FFD700,#FF6B6B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">${marketVal > 0 ? (marketVal/10000).toFixed(2) + '亿' : (marketDesc || '--')}</div>
-        <div style="font-size:10px;opacity:0.35;margin-top:2px;">四部影片合计 ${formatBoxOffice(todayDaily)}</div>
+        <div style="font-size:10px;opacity:0.35;margin-top:2px;">四部影片合计 ${formatBoxOffice(todayDaily)} · ${moviesWithData}/${MOVIES.length}部参与统计</div>
         <div style="margin-top:12px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);font-size:11px;">
             <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="opacity:0.5;">票房冠军</span><span style="color:#FFD700;">${topMovie.name}</span></div>
             <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="opacity:0.5;">票房占比</span><span>${dash[topMovie.id]?.box_rate||'--'}</span></div>
@@ -854,17 +858,7 @@ function renderRadarChart() {
     const dash = allData.dashByMovie||{};
     const d = allData.dailyByMovie||{};
 
-    const indicators = [
-        { name: '日票房', max: 6000 },
-        { name: '累计票房(亿)', max: 7 },
-        { name: '上座率(%)', max: 8 },
-        { name: '排片占比(%)', max: 50 },
-        { name: '票房占比(%)', max: 90 },
-    ];
-
-    const chart = echarts.init(el);
-    charts.radar = chart;
-
+    // 先计算各电影数值，用于动态确定 max
     const seriesData = MOVIES.map(m => {
         const dd = dash[m.id]||{};
         const records = d[m.id]||[];
@@ -884,6 +878,21 @@ function renderRadarChart() {
             itemStyle: { color: m.color },
         };
     });
+
+    // 日票房、累计票房动态 max（最大值 × 1.2 向上取整）
+    // 百分比类指标保留固定上限
+    const maxDaily = Math.ceil(Math.max(...seriesData.map(s => s.value[0]), 1) * 1.2);
+    const maxTotal = Math.ceil(Math.max(...seriesData.map(s => s.value[1]), 0.1) * 1.2);
+    const indicators = [
+        { name: '日票房', max: maxDaily },
+        { name: '累计票房(亿)', max: maxTotal },
+        { name: '上座率(%)', max: 8 },
+        { name: '排片占比(%)', max: 50 },
+        { name: '票房占比(%)', max: 90 },
+    ];
+
+    const chart = echarts.init(el);
+    charts.radar = chart;
 
     chart.setOption({
         backgroundColor: 'transparent',
